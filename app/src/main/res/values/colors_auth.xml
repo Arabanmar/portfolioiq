@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same navy/cream fintech identity used across the Sprint Zero mockups
+         and the Tool Spotlight deck, so the real screens match what was
+         already presented. Merge these into the project's main colors.xml
+         if one already exists rather than keeping a second file. -->
+    <color name="portfolioiq_navy">#1F2A44</color>
+    <color name="portfolioiq_navy_light">#26314F</color>
+    <color name="portfolioiq_cream">#FBF8F1</color>
+    <color name="portfolioiq_gold">#C99A3D</color>
+    <color name="portfolioiq_muted">#8D96AC</color>
+    <color name="portfolioiq_error">#E07B6B</color>
+</resources>
