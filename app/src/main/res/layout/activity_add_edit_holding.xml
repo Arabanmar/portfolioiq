@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/portfolioiq_navy"
+    android:paddingHorizontal="32dp"
+    android:paddingTop="72dp"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:id="@+id/screenTitleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add Holding"
+        android:textColor="@color/portfolioiq_cream"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="32dp"
+        android:text="Track a stock in your portfolio"
+        android:textColor="@color/portfolioiq_muted"
+        android:textSize="15sp" />
+
+    <EditText
+        android:id="@+id/tickerInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Ticker (e.g. AAPL)"
+        android:inputType="textCapCharacters"
+        android:textColorHint="@color/portfolioiq_muted"
+        android:textColor="@color/portfolioiq_cream"
+        android:background="@color/portfolioiq_navy_light"
+        android:padding="14dp"
+        android:layout_marginBottom="12dp" />
+
+    <EditText
+        android:id="@+id/quantityInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Quantity (shares)"
+        android:inputType="numberDecimal"
+        android:textColorHint="@color/portfolioiq_muted"
+        android:textColor="@color/portfolioiq_cream"
+        android:background="@color/portfolioiq_navy_light"
+        android:padding="14dp"
+        android:layout_marginBottom="12dp" />
+
+    <EditText
+        android:id="@+id/purchasePriceInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Purchase price per share"
+        android:inputType="numberDecimal"
+        android:textColorHint="@color/portfolioiq_muted"
+        android:textColor="@color/portfolioiq_cream"
+        android:background="@color/portfolioiq_navy_light"
+        android:padding="14dp"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/errorText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/portfolioiq_error"
+        android:textSize="14sp"
+        android:visibility="gone"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/saveButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Save"
+        android:textColor="@color/portfolioiq_navy"
+        android:backgroundTint="@color/portfolioiq_gold"
+        android:layout_marginTop="8dp" />
+
+    <TextView
+        android:id="@+id/cancelText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Cancel"
+        android:textColor="@color/portfolioiq_muted"
+        android:clickable="true"
+        android:focusable="true" />
+
+</LinearLayout>

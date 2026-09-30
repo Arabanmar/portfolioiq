@@ -15,6 +15,7 @@ import com.portfolioiq.domain.model.User;
 import com.portfolioiq.domain.repository.AuthCallback;
 import com.portfolioiq.domain.repository.AuthRepository;
 import com.portfolioiq.domain.usecase.LoginUseCase;
+import com.portfolioiq.presentation.dashboard.DashboardActivity;
 
 /**
  * Story 002 — Login & Authentication.
@@ -86,8 +87,9 @@ public class SignInActivity extends AppCompatActivity {
     }
 
     private void goToDashboard() {
-        // Dashboard screen is Story 004 (Sprint 2) — not built yet.
-        // TODO(Sprint 2): startActivity(new Intent(this, DashboardActivity.class));
+        // Story 004 (Sprint 2): the dashboard now exists, so Login finally
+        // routes here instead of just closing back to the Welcome screen.
+        startActivity(new Intent(SignInActivity.this, DashboardActivity.class));
         finish();
     }
 }

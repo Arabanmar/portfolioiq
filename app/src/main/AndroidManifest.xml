@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Story 004 (Sprint 2): explicit even though Firebase's own library
+         manifest likely already merges this in for Auth/Firestore -- the
+         Finnhub HTTP calls need it too, so make it explicit rather than
+         rely on that being true forever. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -22,6 +28,8 @@
         <activity android:name=".presentation.auth.SignInActivity" android:exported="false" />
         <activity android:name=".presentation.auth.RegisterActivity" android:exported="false" />
         <activity android:name=".presentation.auth.ForgotPasswordActivity" android:exported="false" />
+        <activity android:name=".presentation.dashboard.DashboardActivity" android:exported="false" />
+        <activity android:name=".presentation.portfolio.AddEditHoldingActivity" android:exported="false" />
     </application>
 
 </manifest>

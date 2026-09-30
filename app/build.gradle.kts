@@ -1,6 +1,22 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.google.gms.google.services)
 }
+
+// Sprint 2 (Story 004): the Finnhub API key is a secret, so it comes from
+// local.properties (already gitignored for the Android SDK path) rather
+// than being hardcoded in source. Add a line like:
+//   FINNHUB_API_KEY=your_key_here
+// to your own local.properties -- see README.md.
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+val finnhubApiKey: String = localProperties.getProperty("FINNHUB_API_KEY", "")
 
 android {
     namespace = "com.portfolioiq"
@@ -16,6 +32,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "FINNHUB_API_KEY", "\"$finnhubApiKey\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -35,6 +57,9 @@ dependencies {
     implementation(libs.activity.ktx)
     implementation(libs.appcompat)
     implementation(libs.constraintlayout)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.googleid)
     implementation(libs.material)
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
