@@ -34,6 +34,7 @@ public class SignInActivity extends AppCompatActivity {
     private Button signInButton;
     private TextView errorText;
     private TextView goToRegisterText;
+    private TextView forgotPasswordText;
 
     private LoginUseCase loginUseCase;
 
@@ -50,12 +51,15 @@ public class SignInActivity extends AppCompatActivity {
         signInButton = findViewById(R.id.signInButton);
         errorText = findViewById(R.id.errorText);
         goToRegisterText = findViewById(R.id.goToRegisterText);
+        forgotPasswordText = findViewById(R.id.forgotPasswordText);
 
         signInButton.setOnClickListener(v -> attemptSignIn());
         goToRegisterText.setOnClickListener(v -> {
             startActivity(new Intent(SignInActivity.this, RegisterActivity.class));
             finish();
         });
+        forgotPasswordText.setOnClickListener(v ->
+                startActivity(new Intent(SignInActivity.this, ForgotPasswordActivity.class)));
     }
 
     private void attemptSignIn() {
