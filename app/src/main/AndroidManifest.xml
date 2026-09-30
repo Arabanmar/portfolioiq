@@ -3,9 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Story 004 (Sprint 2): explicit even though Firebase's own library
-         manifest likely already merges this in for Auth/Firestore -- the
-         Finnhub HTTP calls need it too, so make it explicit rather than
-         rely on that being true forever. -->
+         manifest likely already merges this in for Auth/Firestore.
+         The Finnhub HTTP calls need it too, so make it explicit rather
+         than rely on that being true forever. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
