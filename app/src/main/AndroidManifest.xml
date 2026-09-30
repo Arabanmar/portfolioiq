@@ -21,6 +21,7 @@
         </activity>
         <activity android:name=".presentation.auth.SignInActivity" android:exported="false" />
         <activity android:name=".presentation.auth.RegisterActivity" android:exported="false" />
+        <activity android:name=".presentation.auth.ForgotPasswordActivity" android:exported="false" />
     </application>
 
 </manifest>

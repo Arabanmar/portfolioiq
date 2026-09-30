@@ -33,11 +33,20 @@ import java.util.Map;
  *  - login() maps BOTH "no such account" and "wrong password" to the exact
  *    same generic message, per Sprint 1 test case TC006. This is deliberate:
  *    telling an attacker which one it was is a user-enumeration bug.
+ *
+ * sendPasswordReset() follows the same user-enumeration philosophy: Firebase
+ * itself throws FirebaseAuthInvalidUserException when the email isn't
+ * registered, which would otherwise let an attacker probe which addresses
+ * have an account just by watching for success vs failure. So an
+ * unregistered email is treated as a SUCCESS here too (the UI shows the same
+ * "check your inbox" message either way) — only genuine failures (network,
+ * malformed address that slipped past validation, etc.) surface as errors.
  */
 public class FirebaseAuthRepositoryImpl implements AuthRepository {
 
     private static final String USERS_COLLECTION = "users";
     private static final String GENERIC_LOGIN_ERROR = "Invalid email or password.";
+    private static final String GENERIC_RESET_ERROR = "Could not send the reset email. Please try again.";
 
     private final FirebaseAuth firebaseAuth;
     private final FirebaseFirestore firestore;
@@ -92,6 +101,23 @@ public class FirebaseAuthRepositoryImpl implements AuthRepository {
                         callback.onError(GENERIC_LOGIN_ERROR);
                     } else {
                         callback.onError("Something went wrong. Please try again.");
+                    }
+                });
+    }
+
+    @Override
+    public void sendPasswordReset(String email, AuthCallback<Void> callback) {
+        firebaseAuth.sendPasswordResetEmail(email)
+                .addOnSuccessListener(unused -> callback.onSuccess(null))
+                .addOnFailureListener(exception -> {
+                    if (exception instanceof FirebaseAuthInvalidUserException) {
+                        // Same address does-or-doesn't-exist question as login's
+                        // enumeration bug, so it gets the same fix: report
+                        // success either way. The UI's "check your inbox"
+                        // message never confirms or denies the account exists.
+                        callback.onSuccess(null);
+                    } else {
+                        callback.onError(GENERIC_RESET_ERROR);
                     }
                 });
     }

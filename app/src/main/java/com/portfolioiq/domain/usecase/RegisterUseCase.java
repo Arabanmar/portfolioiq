@@ -1,10 +1,9 @@
 package com.portfolioiq.domain.usecase;
 
-import android.util.Patterns;
-
 import com.portfolioiq.domain.model.User;
 import com.portfolioiq.domain.repository.AuthCallback;
 import com.portfolioiq.domain.repository.AuthRepository;
+import com.portfolioiq.domain.util.EmailValidator;
 
 /**
  * UseCase pattern adapted for plain Java (ECC's android-clean-architecture
@@ -12,6 +11,12 @@ import com.portfolioiq.domain.repository.AuthRepository;
  * equivalent, so every UseCase in this project instead exposes one
  * execute(...) method). One UseCase, one job: validate the input this
  * screen collected, then delegate to the repository.
+ *
+ * Email format is validated via EmailValidator (plain java.util.regex, no
+ * android.util.Patterns dependency), so this class has zero Android
+ * framework dependency and can be unit-tested on the plain JVM (no emulator
+ * or instrumentation needed) — a clean-architecture domain layer should not
+ * depend on the Android SDK.
  */
 public class RegisterUseCase {
 
@@ -29,7 +34,7 @@ public class RegisterUseCase {
             callback.onError("Please fill in every field.");
             return;
         }
-        if (!Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) {
+        if (!EmailValidator.isValid(email.trim())) {
             callback.onError("Enter a valid email address.");
             return;
         }

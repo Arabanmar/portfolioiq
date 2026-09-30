@@ -12,4 +12,11 @@ public interface AuthRepository {
     void register(String email, String password, AuthCallback<User> callback);
 
     void login(String email, String password, AuthCallback<User> callback);
+
+    /**
+     * Sends a password-reset email for the given address. There is no
+     * meaningful "result" beyond success/failure, so the callback is typed
+     * Void — onSuccess(null) means the reset email was sent.
+     */
+    void sendPasswordReset(String email, AuthCallback<Void> callback);
 }
