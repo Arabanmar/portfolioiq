@@ -1,15 +1,20 @@
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+local.properties
+
+# Firebase config - contains project-specific keys, never commit
+app/google-services.json
+
+# IDE
+.idea/
 .DS_Store
+
+# Build outputs
 /build
 /captures
 .externalNativeBuild
 .cxx
-local.properties
+
+# Machine-specific Gradle toolchain file
+gradle/gradle-daemon-jvm.properties
