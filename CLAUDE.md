@@ -144,11 +144,12 @@ pattern:
   done yet because it wasn't in scope for any specific story. Don't
   silently "fix" this as a side effect of an unrelated change; call it
   out and do it as its own deliberate commit if asked to.
-- **Known gap:** Firestore is still running on its initial open "test
-  mode" rules (no rule yet restricts `users/{uid}/holdings` to its owning
-  user). Flagged in Sprint 2's PR review; deliberately deferred by the
-  team ("firebase later"). Don't silently fix this either without being
-  asked — it needs the Firebase Console, which is outside this repo.
+- **Resolved (was a known gap):** Firestore ran on open "test mode"
+  rules through Sprint 2; closed 2026-10-04 with rules restricting
+  `users/{uid}/holdings` (and the parent `users/{uid}` doc) to
+  `request.auth.uid == userId`. See `references/decision-log.md`. If
+  you're adding a new top-level collection, give it the same
+  owner-scoped rule — don't assume Firestore is still open.
 
 ## Definition of done
 
