@@ -236,3 +236,23 @@ src/com/portfolioiq/domain/usecase/SellStockUseCaseInstanceB.java:46: error: met
 This does not reverse the comparison's conclusion — Instance B is still unambiguously closer to the real codebase (correct package, correct imports, correct callback interface, correct numeric type, correct validate-then-delegate convention) — but "closer" is not "compiles," and the earlier write-up overstated it by implying Instance B was build-correct without ever having tried to build it. A context file supplies the shape of the convention; it does not substitute for compiling against the actual interfaces, and multi-user-scoped repository methods and an immutable model are exactly the kind of signature detail that only shows up by trying to call them, not by reading `CLAUDE.md`'s prose.
 
 The scratch branch and both compiler transcripts above are the full, unedited evidence; nothing here was summarized away.
+
+## Re-run after the CLAUDE.md fix (2026-10-04)
+
+The compile check above found two real gaps in `CLAUDE.md`'s UseCase convention section: it never stated that every `PortfolioRepository` method takes `userId` first, and never stated that `StockHolding` is immutable with no setters. Both were added to `CLAUDE.md` as two new bullets in that same section (see `CLAUDE.md` and the commit on this branch). To check whether that actually fixes anything, the same blind-generation method was re-run: a fresh agent instance, zero prior conversation history, no file access, given only the task sentence plus the full updated text of `CLAUDE.md` (the two new bullets included), asked to produce "Instance B (revised)." The agent was not told what the previous compile check found.
+
+**Instance B (revised) — what changed:** it now passes `userId` as the first argument on every `getHoldings`/`updateHolding`/`deleteHolding` call, and builds a new `StockHolding` instance rather than calling a setter — both exactly matching the two new rules. Compiled as generated against this repository's real `StockHolding`, `PortfolioRepository`, and `ResultCallback` (after only a mechanical package-prefix correction — `domain.usecase` to `com.portfolioiq.domain.usecase` — a separate, already-documented limitation: `CLAUDE.md`'s architecture diagram shows the `domain/model/repository/usecase` directory layout but never states the `com.portfolioiq` root package explicitly, so this one correction is not part of what the two new rules were meant to fix):
+
+```
+$ javac -d out $(find src -name '*.java')
+src/com/portfolioiq/domain/usecase/SellStockUseCase.java:95: error: cannot find symbol
+                            existingHolding.getPurchaseDate()
+                                           ^
+  symbol:   method getPurchaseDate()
+  location: variable existingHolding of type StockHolding
+1 error
+```
+
+Down from 4 errors to 1 — and the 1 remaining error is not either of the two the new rules targeted. Both targeted errors are gone: no arity mismatch on `getHoldings`/`updateHolding`/`deleteHolding`, no call to a nonexistent setter. The one error that remains is new: the agent guessed a `StockHolding(ticker, quantity, purchasePrice, purchaseDate)` constructor with a `getPurchaseDate()` getter, neither of which exists — the real constructor is `StockHolding(String id, String ticker, double quantity, double purchasePrice)`, with no purchase-date field at all. `CLAUDE.md` still doesn't state the model's actual constructor signature or getter list anywhere, only that it's immutable, so this was unreachable from the file as it stands today.
+
+Honest reading of this result: the two added rules worked, precisely and only on what they targeted. This is real, re-run evidence, not an assumption that adding a sentence to a context file would obviously help — it's reported here exactly as it compiled, remaining error included, rather than quietly fixing the new error before reporting a clean pass. The natural further step this surfaces — not yet done, logged here rather than acted on immediately — is to also document `StockHolding`'s real constructor and getters in `CLAUDE.md` and re-run a third time to see whether that closes the last gap.

@@ -103,6 +103,19 @@ pattern:
   Firebase/network call here is async). Use `ResultCallback<T>` (in
   `domain.repository`) for anything new — see "known inconsistency"
   below for why `AuthRepository` still uses the older `AuthCallback<T>`.
+- **Every `PortfolioRepository` method takes `userId` as its first
+  parameter** (`getHoldings(String userId, ...)`, `addHolding(String
+  userId, StockHolding, ...)`, `updateHolding(String userId,
+  StockHolding, ...)`, `deleteHolding(String userId, String holdingId,
+  ...)`) — every call is scoped to one signed-in user's data. A use case
+  that omits it will not compile; this was found the hard way during
+  Lab 2's real `javac` compile check, not from reading this file, so it
+  is being written down here now.
+- **`StockHolding` is immutable** — every field is `final`, there are no
+  setters, and the only way to "update" one is to build a new instance
+  (the constructor, or the existing `withId(String)` helper for the one
+  field that legitimately needs to change after creation). Don't call
+  `holding.setQuantity(...)` or similar; it doesn't exist.
 
 ## Coding standards
 
