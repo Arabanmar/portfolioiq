@@ -172,3 +172,67 @@ Checked against the real repo: package and all three imports (`StockHolding`, `P
 The two outputs are not stylistic variations of the same design — they diverge on facts that a compiler would catch immediately: wrong package (`data.holding` vs. the real `domain.usecase`), wrong or nonexistent repository methods, a duplicated custom result/error type instead of the project's actual `ResultCallback<T>`, and a different numeric type (`BigDecimal` vs. the `double` every model in this repo actually uses). None of this is something a human reviewer would call a "style preference" — Instance A's code would not compile against this repository at all.
 
 The only difference between the two runs was the presence of `CLAUDE.md`'s "Architecture summary," "UseCase convention," and "Coding standards" sections in the prompt. Those sections are specifically what supplied the real package names, the real callback interface, the raw-string/validate-then-delegate pattern, and the numeric-type convention — none of which are guessable from the task sentence alone, because "sell part of a holding" is generic enough to be implemented correctly in infinitely many ways that would still be wrong for this specific codebase.
+
+## Compile check (real javac output, not reasoning about the code)
+
+The "would not compile" claim above was, until now, a hand-traced judgment — a careful reading of the code against the real repository, not an actual build. This section replaces that judgment with a real compiler run against both classes, on a dedicated scratch branch (`lab2/compile-check-scratch`, not merged into `main`), and reports what actually happened — including a real compile error in Instance B that the original comparison did not catch.
+
+**Method:** Both classes were added to the real repository, unmodified from the text above (only the top-level class renamed `SellStockUseCase` → `SellStockUseCaseInstanceA` / `SellStockUseCaseInstanceB` so each file could exist side by side without a naming collision; no other line was changed). Neither file imports any `android.*` class — the domain layer in this project is plain Java by design — so a direct `javac` compile against the project's real domain-layer sources is a faithful equivalent of `./gradlew compileDebugJavaWithJavac` for this specific question, and was used instead of the full Gradle build: the sandboxed device shell this project's agent runs in has no JDK compiler installed and no network path to Gradle's distribution server, so a full `assembleDebug` could not be run from there. The same source files were copied, unedited, into an environment with a real `javac` (OpenJDK 21) and compiled directly against this repository's actual `StockHolding.java`, `PortfolioRepository.java`, and `ResultCallback.java`.
+
+**Instance A — compiled alone (it references no class that exists in the real repository):**
+
+```
+src/com/portfolioiq/data/holding/SellStockUseCaseInstanceA.java:35: error: cannot find symbol
+    private final StockHoldingRepository repository;
+                  ^
+  symbol:   class StockHoldingRepository
+  location: class SellStockUseCaseInstanceA
+src/com/portfolioiq/data/holding/SellStockUseCaseInstanceA.java:37: error: cannot find symbol
+    public SellStockUseCaseInstanceA(StockHoldingRepository repository) {
+                                     ^
+  symbol:   class StockHoldingRepository
+  location: class SellStockUseCaseInstanceA
+src/com/portfolioiq/data/holding/SellStockUseCaseInstanceA.java:48: error: cannot find symbol
+        StockHolding holding = repository.findById(holdingId);
+        ^
+  symbol:   class StockHolding
+  location: class SellStockUseCaseInstanceA
+3 errors
+```
+
+Confirmed: does not compile, exactly as the original comparison claimed. `StockHoldingRepository` and this package's `StockHolding` are not real classes in this repository.
+
+**Instance B — compiled against the real `StockHolding`, `PortfolioRepository`, and `ResultCallback`:**
+
+```
+src/com/portfolioiq/domain/usecase/SellStockUseCaseInstanceB.java:59: error: method deleteHolding in interface PortfolioRepository cannot be applied to given types;
+                    portfolioRepository.deleteHolding(holdingId, callback);
+                                       ^
+  required: String,String,ResultCallback<Void>
+  found:    String,ResultCallback<Void>
+  reason: actual and formal argument lists differ in length
+src/com/portfolioiq/domain/usecase/SellStockUseCaseInstanceB.java:62: error: cannot find symbol
+                    remaining.setQuantity(holding.getQuantity() - quantityToSell);
+                             ^
+  symbol:   method setQuantity(double)
+  location: variable remaining of type StockHolding
+src/com/portfolioiq/domain/usecase/SellStockUseCaseInstanceB.java:63: error: method updateHolding in interface PortfolioRepository cannot be applied to given types;
+                    portfolioRepository.updateHolding(remaining, callback);
+                                       ^
+  required: String,StockHolding,ResultCallback<Void>
+  found:    StockHolding,ResultCallback<Void>
+  reason: actual and formal argument lists differ in length
+src/com/portfolioiq/domain/usecase/SellStockUseCaseInstanceB.java:46: error: method getHoldings in interface PortfolioRepository cannot be applied to given types;
+        portfolioRepository.getHoldings(new ResultCallback<java.util.List<StockHolding>>() {
+                           ^
+  required: String,ResultCallback<List<StockHolding>>
+  found:    <anonymous ResultCallback<List<StockHolding>>>
+  reason: actual and formal argument lists differ in length
+4 errors
+```
+
+**This is a real finding the original comparison missed: Instance B does not compile either.** All four errors come from the same root cause — `PortfolioRepository`'s real methods (`getHoldings`, `updateHolding`, `deleteHolding`) all take a `userId` as their first parameter, scoping every call to one signed-in user's data, and Instance B's generated code omits it on all three calls. The fourth error is separate: it calls `remaining.setQuantity(...)`, but the real `StockHolding` is an immutable value object with no setters at all — every field is `final` and only set through the constructor or `withId(...)`.
+
+This does not reverse the comparison's conclusion — Instance B is still unambiguously closer to the real codebase (correct package, correct imports, correct callback interface, correct numeric type, correct validate-then-delegate convention) — but "closer" is not "compiles," and the earlier write-up overstated it by implying Instance B was build-correct without ever having tried to build it. A context file supplies the shape of the convention; it does not substitute for compiling against the actual interfaces, and multi-user-scoped repository methods and an immutable model are exactly the kind of signature detail that only shows up by trying to call them, not by reading `CLAUDE.md`'s prose.
+
+The scratch branch and both compiler transcripts above are the full, unedited evidence; nothing here was summarized away.
