@@ -52,7 +52,7 @@ That's a real command run against Anmar's real repository through this server, n
 
 **Purpose:** a structured, per-project memory store the agent reads at the start of a session and writes to after key decisions, so facts about PortfolioIQ persist across separate Claude sessions — including sessions on different days, and sessions that start with no prior conversation at all.
 
-**Why it's relevant to PortfolioIQ, not generic:** the memory doc for this project (`claude/sprint-zero-project-initiation.md`) is PortfolioIQ-specific — it holds the team roster, the architecture rule ("app computes every number, the LLM only interprets"), confirmed decisions (Java not Kotlin, Finnhub over Alpha Vantage/Twelve Data), the full Sprint 1/2 implementation history, the deliberately-deferred Firestore security-rules gap, and the Lab 1-5 progress tracker. None of it is generic boilerplate.
+**Why it's relevant to PortfolioIQ, not generic:** the memory doc for this project (`claude/sprint-zero-project-initiation.md`) is PortfolioIQ-specific — it holds the team roster, the architecture rule ("app computes every number, the LLM only interprets"), confirmed decisions (Java not Kotlin, Finnhub over Alpha Vantage/Twelve Data), the full Sprint 1/2 implementation history, the Firestore security-rules decision (deferred, then closed 2026-10-04 — see `references/decision-log.md`), and the Lab 1-5 progress tracker. None of it is generic boilerplate.
 
 **Demonstrated recall across sessions:** this is not a hypothetical — it happened during this lab's own work. This conversation was compacted partway through (its earlier turns discarded from context, a harder reset than just starting a new chat) after finishing Sprint 2. When work resumed, nothing about Sprint 2's outcome, the Finnhub decision, the `ResultCallback<T>` design choice, or the deferred Firestore gap was re-explained by Anmar — all of it was recalled correctly from the memory document and used to pick up Lab 2 exactly where it had left off, including honoring Anmar's earlier instruction not to raise the Firestore gap unprompted. That's the rubric's "recalling a remembered decision in a fresh session" requirement, demonstrated on a real decision instead of a staged one.
 
@@ -71,7 +71,17 @@ exact security rules... whenever Anmar wants; this requires his own
 Google account access, can't be done from this session directly.
 ```
 
-Those lines were written to memory after Sprint 2's PR merged, then read back and acted on (without being re-stated by Anmar) at the start of the Lab 2 work that followed — real recall, not a same-session echo.
+Those lines were written to memory after Sprint 2's PR merged, then read back and acted on (without being re-stated by Anmar) at the start of the Lab 2 work that followed — real recall, not a same-session echo. (The Firestore line in that excerpt reflects the project's state on 2026-09-30, when the gap was still open; it was closed for real on 2026-10-04 — see `references/decision-log.md` — and is quoted here unedited because changing a dated excerpt after the fact would defeat the point of dating it.)
+
+### Independent, reproducible recall check (2026-10-04)
+
+The excerpt above is this same conversation reporting on its own memory, which is hard for a third party to verify independently — a chat can claim to "remember" something without it meaning much. To address that directly: a **separate agent instance, with zero prior conversation history and no connection to this chat**, was given only shell access to the repository and asked a plain question with no hint at the answer: *"What live stock-price data provider did the PortfolioIQ team choose, and why?"*
+
+It answered correctly, citing its sources, without being told anything beforehand:
+
+> "The PortfolioIQ team chose **Finnhub** (free tier) as their live stock-price data provider. They chose it over **Alpha Vantage** and **Twelve Data**, with the stated reasoning being Finnhub's free tier and its 'simplest per-ticker quote endpoint for Sprint 2's scope.' This is documented verbatim in `references/decision-log.md` under the 2026-09-30 entry... `CLAUDE.md` corroborates this in its 'External services' section... and in the architecture layer naming convention (`FinnhubStockPriceRepositoryImpl`)."
+
+This is a stronger and more honest form of the rubric's "recall in a fresh session" requirement than the excerpt above: it does not rely on this conversation's own self-report, it is reproducible by anyone with repo access, and it shows the real mechanism plainly — a fresh session recovers project decisions by reading the committed, dated documentation (`CLAUDE.md`, `references/decision-log.md`), not from an opaque memory black box. That is also a more accurate description of what "persistent memory" means for this project than the original write-up implied.
 
 ## Summary
 
