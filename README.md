@@ -57,6 +57,11 @@ Studio and choose **Run Tests**, or run `./gradlew test` from a terminal.
   (e.g. `feature/sprint2-dashboard-holdings`). A branch maps to one
   sprint's work, one story, or one focused fix — not a grab-bag of
   unrelated changes.
+- Documented exception: Part Two's "Lab" deliverables (CCSW 431
+  Agentic Development Workflow) use `lab<n>/<short-description>`
+  instead (e.g. `lab2/context-engineering`, `lab3/mcp-and-memory`),
+  to keep lab work visibly separate from Sprint feature work in the
+  branch list. Same PR-and-review rule applies either way.
 - Open a PR into `main` when the branch is ready; a human on the team
   reviews and merges it. The agent opens/pushes when it can, but a human
   always does the actual merge.
