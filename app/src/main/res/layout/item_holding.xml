@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@color/portfolioiq_navy_light"
+    android:background="@color/piq_surface"
     android:padding="14dp"
     android:layout_marginBottom="10dp">
 
@@ -18,7 +18,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="AAPL"
-            android:textColor="@color/portfolioiq_cream"
+            android:textColor="@color/piq_text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -27,7 +27,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="$0.00"
-            android:textColor="@color/portfolioiq_cream"
+            android:textColor="@color/piq_text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -44,7 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="0 shares @ $0.00"
-            android:textColor="@color/portfolioiq_muted"
+            android:textColor="@color/piq_text_secondary"
             android:textSize="13sp" />
 
         <TextView
@@ -52,7 +52,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="+$0.00 (0.0%)"
-            android:textColor="@color/portfolioiq_muted"
+            android:textColor="@color/piq_text_secondary"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -69,7 +69,7 @@
             android:layout_weight="1"
             android:gravity="center_vertical"
             android:text="0.0% of portfolio"
-            android:textColor="@color/portfolioiq_muted"
+            android:textColor="@color/piq_text_secondary"
             android:textSize="12sp" />
 
         <TextView
@@ -78,7 +78,7 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:text="Edit"
-            android:textColor="@color/portfolioiq_gold"
+            android:textColor="@color/piq_accent_text"
             android:clickable="true"
             android:focusable="true" />
 
@@ -87,7 +87,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Delete"
-            android:textColor="@color/portfolioiq_error"
+            android:textColor="@color/piq_error"
             android:clickable="true"
             android:focusable="true" />
     </LinearLayout>

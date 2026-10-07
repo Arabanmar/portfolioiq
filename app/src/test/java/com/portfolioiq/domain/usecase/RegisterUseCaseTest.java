@@ -20,7 +20,8 @@ import org.junit.Test;
  * These map 1:1 onto PortfolioIQ_Sprint1_TestCases.docx's Registration
  * table (TC001-TC007) after that doc was trimmed to match the app as
  * actually shipped (no "Full Name" field; blank email/password/confirm
- * all collapse into one combined message). TC001 (tapping "Create
+ * all collapse into one combined message). Sprint 3 added a required
+ * Username field (doctor's feedback); its tests are at the bottom. TC001 (tapping "Create
  * Account" navigates to Sign Up) is a UI-navigation case and isn't
  * covered here — everything else is.
  */
@@ -40,7 +41,7 @@ public class RegisterUseCaseTest {
     @Test
     public void blankEmail_showsFillInEveryFieldError() {
         // Maps to Sprint 1 TestCases TC002.
-        useCase.execute("", "password1", "password1", callback);
+        useCase.execute("anmar_1", "", "password1", "password1", callback);
 
         assertEquals("Please fill in every field.", callback.errorMessage);
         assertFalse("repository should not be called when validation fails", fakeRepository.registerCalled);
@@ -49,7 +50,7 @@ public class RegisterUseCaseTest {
     @Test
     public void blankPassword_showsFillInEveryFieldError() {
         // Maps to Sprint 1 TestCases TC002.
-        useCase.execute("user@example.com", "", "", callback);
+        useCase.execute("anmar_1", "user@example.com", "", "", callback);
 
         assertEquals("Please fill in every field.", callback.errorMessage);
         assertFalse(fakeRepository.registerCalled);
@@ -58,7 +59,7 @@ public class RegisterUseCaseTest {
     @Test
     public void blankConfirmPassword_showsFillInEveryFieldError() {
         // Maps to Sprint 1 TestCases TC002.
-        useCase.execute("user@example.com", "password1", "", callback);
+        useCase.execute("anmar_1", "user@example.com", "password1", "", callback);
 
         assertEquals("Please fill in every field.", callback.errorMessage);
         assertFalse(fakeRepository.registerCalled);
@@ -68,7 +69,7 @@ public class RegisterUseCaseTest {
     public void invalidEmailFormat_showsValidEmailError() {
         // Maps to Sprint 1 TestCases TC003. Wording matches the doc exactly:
         // "Enter a valid email address."
-        useCase.execute("not-an-email", "password1", "password1", callback);
+        useCase.execute("anmar_1", "not-an-email", "password1", "password1", callback);
 
         assertEquals("Enter a valid email address.", callback.errorMessage);
         assertFalse(fakeRepository.registerCalled);
@@ -77,7 +78,7 @@ public class RegisterUseCaseTest {
     @Test
     public void passwordTooShort_showsMinLengthError() {
         // Maps to Sprint 1 TestCases TC004.
-        useCase.execute("user@example.com", "abc", "abc", callback);
+        useCase.execute("anmar_1", "user@example.com", "abc", "abc", callback);
 
         assertEquals("Password must be at least 6 characters.", callback.errorMessage);
         assertFalse(fakeRepository.registerCalled);
@@ -86,7 +87,7 @@ public class RegisterUseCaseTest {
     @Test
     public void passwordMismatch_showsPasswordsDoNotMatchError() {
         // Maps to Sprint 1 TestCases TC005.
-        useCase.execute("user@example.com", "password1", "password2", callback);
+        useCase.execute("anmar_1", "user@example.com", "password1", "password2", callback);
 
         assertEquals("Passwords do not match.", callback.errorMessage);
         assertFalse(fakeRepository.registerCalled);
@@ -94,7 +95,7 @@ public class RegisterUseCaseTest {
 
     @Test
     public void validInput_delegatesToRepositoryWithTrimmedEmail() {
-        useCase.execute("  user@example.com  ", "password1", "password1", callback);
+        useCase.execute("anmar_1", "  user@example.com  ", "password1", "password1", callback);
 
         assertTrue("repository should be called for valid input", fakeRepository.registerCalled);
         assertEquals("email should be trimmed before reaching the repository",
@@ -108,7 +109,7 @@ public class RegisterUseCaseTest {
         User expected = new User("uid-123", "user@example.com");
         fakeRepository.successResult = expected;
 
-        useCase.execute("user@example.com", "password1", "password1", callback);
+        useCase.execute("anmar_1", "user@example.com", "password1", "password1", callback);
 
         assertNotNull(callback.successUser);
         assertEquals(expected.getUid(), callback.successUser.getUid());
@@ -125,10 +126,52 @@ public class RegisterUseCaseTest {
         // straight through unmodified.
         fakeRepository.errorToReturn = "An account with this email already exists.";
 
-        useCase.execute("user@example.com", "password1", "password1", callback);
+        useCase.execute("anmar_1", "user@example.com", "password1", "password1", callback);
 
         assertEquals("An account with this email already exists.", callback.errorMessage);
         assertNull(callback.successUser);
+    }
+
+    // --- Username (Sprint 3, doctor's feedback) ---
+
+    @Test
+    public void blankUsername_showsFillInEveryFieldError() {
+        useCase.execute("   ", "user@example.com", "password1", "password1", callback);
+
+        assertEquals("Please fill in every field.", callback.errorMessage);
+        assertFalse(fakeRepository.registerCalled);
+    }
+
+    @Test
+    public void usernameTooShort_showsUsernameRuleError() {
+        useCase.execute("ab", "user@example.com", "password1", "password1", callback);
+
+        assertEquals("Username must be 3-20 characters: letters, numbers, _ or .", callback.errorMessage);
+        assertFalse(fakeRepository.registerCalled);
+    }
+
+    @Test
+    public void usernameTooLong_showsUsernameRuleError() {
+        useCase.execute("a234567890123456789012", "user@example.com", "password1", "password1", callback);
+
+        assertEquals("Username must be 3-20 characters: letters, numbers, _ or .", callback.errorMessage);
+        assertFalse(fakeRepository.registerCalled);
+    }
+
+    @Test
+    public void usernameWithSpacesOrSymbols_showsUsernameRuleError() {
+        useCase.execute("anmar arab!", "user@example.com", "password1", "password1", callback);
+
+        assertEquals("Username must be 3-20 characters: letters, numbers, _ or .", callback.errorMessage);
+        assertFalse(fakeRepository.registerCalled);
+    }
+
+    @Test
+    public void validUsername_isTrimmedAndPassedToRepository() {
+        useCase.execute("  anmar.arab_1  ", "user@example.com", "password1", "password1", callback);
+
+        assertTrue(fakeRepository.registerCalled);
+        assertEquals("anmar.arab_1", fakeRepository.lastUsername);
     }
 
     /** Simple synchronous capture of whichever AuthCallback method fires. */

@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/portfolioiq_navy"
+    android:background="@color/piq_background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -17,7 +17,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Your Portfolio"
-            android:textColor="@color/portfolioiq_cream"
+            android:textColor="@color/piq_text_primary"
             android:textSize="28sp"
             android:textStyle="bold" />
 
@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="$0.00"
-            android:textColor="@color/portfolioiq_cream"
+            android:textColor="@color/piq_text_primary"
             android:textSize="36sp"
             android:textStyle="bold" />
 
@@ -37,7 +37,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="No holdings yet"
-            android:textColor="@color/portfolioiq_muted"
+            android:textColor="@color/piq_text_secondary"
             android:textSize="15sp" />
 
         <TextView
@@ -45,7 +45,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:textColor="@color/portfolioiq_error"
+            android:textColor="@color/piq_error"
             android:textSize="14sp"
             android:visibility="gone" />
 
@@ -55,15 +55,15 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:text="+ Add Holding"
-            android:textColor="@color/portfolioiq_navy"
-            android:backgroundTint="@color/portfolioiq_gold" />
+            android:textColor="@color/piq_on_accent"
+            android:backgroundTint="@color/piq_accent" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
             android:text="Holdings"
-            android:textColor="@color/portfolioiq_cream"
+            android:textColor="@color/piq_text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -80,7 +80,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="You haven't added any stocks yet."
-            android:textColor="@color/portfolioiq_muted"
+            android:textColor="@color/piq_text_secondary"
             android:textSize="14sp"
             android:visibility="gone" />
 

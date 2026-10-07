@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/portfolioiq_navy"
+    android:background="@color/piq_background"
     android:paddingHorizontal="32dp"
     android:gravity="center">
 
@@ -11,7 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="PortfolioIQ"
-        android:textColor="@color/portfolioiq_cream"
+        android:textColor="@color/piq_text_primary"
         android:textSize="40sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp" />
@@ -20,7 +20,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Understand your portfolio, in plain language"
-        android:textColor="@color/portfolioiq_muted"
+        android:textColor="@color/piq_text_secondary"
         android:textSize="15sp"
         android:layout_marginBottom="48dp" />
 
@@ -29,8 +29,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Sign In"
-        android:textColor="@color/portfolioiq_navy"
-        android:backgroundTint="@color/portfolioiq_gold"
+        android:textColor="@color/piq_on_accent"
+        android:backgroundTint="@color/piq_accent"
         android:layout_marginBottom="12dp" />
 
     <Button
@@ -38,7 +38,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Create Account"
-        android:textColor="@color/portfolioiq_cream"
-        android:backgroundTint="@color/portfolioiq_navy_light" />
+        android:textColor="@color/piq_on_primary"
+        android:backgroundTint="@color/piq_primary" />
 
 </LinearLayout>

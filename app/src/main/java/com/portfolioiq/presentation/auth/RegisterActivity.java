@@ -25,6 +25,7 @@ import com.portfolioiq.domain.usecase.RegisterUseCase;
  */
 public class RegisterActivity extends AppCompatActivity {
 
+    private EditText usernameInput;
     private EditText emailInput;
     private EditText passwordInput;
     private EditText confirmPasswordInput;
@@ -42,6 +43,7 @@ public class RegisterActivity extends AppCompatActivity {
         AuthRepository authRepository = new FirebaseAuthRepositoryImpl();
         registerUseCase = new RegisterUseCase(authRepository);
 
+        usernameInput = findViewById(R.id.usernameInput);
         emailInput = findViewById(R.id.emailInput);
         passwordInput = findViewById(R.id.passwordInput);
         confirmPasswordInput = findViewById(R.id.confirmPasswordInput);
@@ -60,11 +62,12 @@ public class RegisterActivity extends AppCompatActivity {
         errorText.setVisibility(View.GONE);
         registerButton.setEnabled(false);
 
+        String username = usernameInput.getText().toString();
         String email = emailInput.getText().toString();
         String password = passwordInput.getText().toString();
         String confirmPassword = confirmPasswordInput.getText().toString();
 
-        registerUseCase.execute(email, password, confirmPassword, new AuthCallback<User>() {
+        registerUseCase.execute(username, email, password, confirmPassword, new AuthCallback<User>() {
             @Override
             public void onSuccess(User user) {
                 registerButton.setEnabled(true);

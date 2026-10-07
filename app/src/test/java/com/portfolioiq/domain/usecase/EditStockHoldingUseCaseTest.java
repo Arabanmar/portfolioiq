@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.portfolioiq.domain.repository.FakePortfolioRepository;
+import com.portfolioiq.domain.repository.FakeStockSearchRepository;
 import com.portfolioiq.domain.repository.ResultCallback;
 
 import org.junit.Before;
@@ -14,12 +15,14 @@ import org.junit.Test;
 public class EditStockHoldingUseCaseTest {
 
     private FakePortfolioRepository fakeRepository;
+    private FakeStockSearchRepository fakeStockSearch;
     private EditStockHoldingUseCase useCase;
 
     @Before
     public void setUp() {
         fakeRepository = new FakePortfolioRepository();
-        useCase = new EditStockHoldingUseCase(fakeRepository);
+        fakeStockSearch = new FakeStockSearchRepository(); // knows AAPL, TSLA, MSFT
+        useCase = new EditStockHoldingUseCase(fakeRepository, fakeStockSearch);
     }
 
     @Test
@@ -66,6 +69,14 @@ public class EditStockHoldingUseCaseTest {
         Result result = execute("holding-1", "AAPL", "10", "150.00");
 
         assertEquals("Could not reach your portfolio. Please try again.", result.error);
+    }
+
+    @Test
+    public void unknownTicker_isRejectedAndNothingUpdated() {
+        Result result = execute("holding-1", "NOTREAL", "5", "220.50");
+
+        assertEquals("Unknown stock symbol. Pick a stock from the suggestions.", result.error);
+        assertFalse(fakeRepository.updateHoldingCalled);
     }
 
     private Result execute(String holdingId, String ticker, String quantity, String purchasePrice) {

@@ -18,7 +18,10 @@ that map to the course's own Week 3/5/7/9/10 milestones.
 
 Stories shipped so far: 001 Registration, 002 Login & Authentication
 (Sprint 1); 003 Add/Edit/Delete Stock Holding, 004 Portfolio Dashboard &
-Calculations (Sprint 2). Stories 005 (AI Portfolio Analysis) and 006 (AI
+Calculations (Sprint 2). After the doctor's Sprint 2 review: a light-only
+theme, a required username at sign-up, and a stock search dropdown on the
+Add/Edit Holding screen that only lets real stock symbols be saved.
+Stories 005 (AI Portfolio Analysis) and 006 (AI
 Chat Assistant) are planned but not started — they will use Firebase AI
 Logic (Gemini) and must follow the architecture rule below.
 
@@ -51,7 +54,8 @@ domain/          Business logic only. Zero Android SDK or Firebase
 data/repository/  One implementation class per domain repository
                   interface, named <TechnologyName><InterfaceName>Impl
                   (FirebaseAuthRepositoryImpl, FirestorePortfolioRepositoryImpl,
-                  FinnhubStockPriceRepositoryImpl). This is the only
+                  FinnhubStockPriceRepositoryImpl,
+                  FinnhubStockSearchRepositoryImpl). This is the only
                   package allowed to import FirebaseAuth, FirebaseFirestore,
                   or make raw HTTP calls.
 
@@ -141,6 +145,16 @@ pattern:
   `app/build.gradle.kts`) or from `google-services.json` (gitignored).
   This was Part One's `security-reviewer` finding #1 and it must never
   regress.
+- **Light theme only, colors in one place.** Layouts use the semantic
+  `piq_*` colors from `res/values/colors_theme.xml` (`piq_background`,
+  `piq_surface`, `piq_text_primary`, ...), never raw hex values or the
+  old `portfolioiq_*` navy/cream colors. Both `values/themes.xml` and
+  `values-night/themes.xml` use `Theme.Material3.Light`, on purpose, so
+  the app stays light in the phone's dark mode.
+- **A ticker is saved only if it is a real stock.** The check lives in
+  `AddStockHoldingUseCase`/`EditStockHoldingUseCase` (via
+  `StockSearchRepository.lookupSymbol`), after the local checks pass, not
+  in the Activity. The dropdown is a convenience; don't move the rule there.
 - **Test doubles, not a mocking framework.** There's no Mockito/MockK
   dependency in this project — write a small hand-written `Fake*`
   implementing the real interface (see `FakeAuthRepository`,

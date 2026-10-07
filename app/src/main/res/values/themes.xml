@@ -1,8 +1,17 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.MyApplication" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+    <!-- Base application theme. Light theme only (doctor's feedback): the app
+         stays light even when the phone itself is in dark mode. -->
+    <style name="Base.Theme.MyApplication" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/piq_primary</item>
+        <item name="colorOnPrimary">@color/piq_on_primary</item>
+        <item name="colorSecondary">@color/piq_accent</item>
+        <item name="colorOnSecondary">@color/piq_on_accent</item>
+        <item name="colorError">@color/piq_error</item>
+        <item name="android:colorBackground">@color/piq_background</item>
+        <item name="android:windowBackground">@color/piq_background</item>
+        <item name="android:statusBarColor">@color/piq_background</item>
+        <item name="android:navigationBarColor">@color/piq_background</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
     <style name="Theme.MyApplication" parent="Base.Theme.MyApplication" />
