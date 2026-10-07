@@ -6,27 +6,29 @@ import static org.junit.Assert.assertTrue;
 
 import com.portfolioiq.domain.model.StockHolding;
 import com.portfolioiq.domain.repository.FakePortfolioRepository;
+import com.portfolioiq.domain.repository.FakeStockSearchRepository;
 import com.portfolioiq.domain.repository.ResultCallback;
 
 import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Story 003 (Add). Hand-traced against AddStockHoldingUseCase.java the
- * same way Sprint 1's RegisterUseCaseTest was -- Anmar's laptop still
- * can't reliably run Gradle, so these are verified by reading the source
- * line-by-line against each test's inputs and expected branch, not by an
- * actual JUnit run.
+ * Story 003 (Add). Originally hand-traced (Gradle couldn't run on the
+ * team laptop at the time). Since the Sprint 3 changes, the whole domain
+ * test suite has also been run for real with JUnit 4.13.2 (javac + JUnitCore
+ * against the domain layer, which has no Android imports).
  */
 public class AddStockHoldingUseCaseTest {
 
     private FakePortfolioRepository fakeRepository;
+    private FakeStockSearchRepository fakeStockSearch;
     private AddStockHoldingUseCase useCase;
 
     @Before
     public void setUp() {
         fakeRepository = new FakePortfolioRepository();
-        useCase = new AddStockHoldingUseCase(fakeRepository);
+        fakeStockSearch = new FakeStockSearchRepository(); // knows AAPL, TSLA, MSFT
+        useCase = new AddStockHoldingUseCase(fakeRepository, fakeStockSearch);
     }
 
     @Test
@@ -81,6 +83,36 @@ public class AddStockHoldingUseCaseTest {
         Result result = execute("AAPL", "10", "150.00");
 
         assertEquals("Could not reach your portfolio. Please try again.", result.error);
+    }
+
+    // --- Real-stock check (Sprint 3, doctor's feedback) ---
+
+    @Test
+    public void unknownTicker_isRejectedAndNothingSaved() {
+        Result result = execute("ZZZZQ", "10", "150.00");
+
+        assertTrue(fakeStockSearch.lookupCalled);
+        assertEquals("ZZZZQ", fakeStockSearch.lastLookup);
+        assertEquals("Unknown stock symbol. Pick a stock from the suggestions.", result.error);
+        assertFalse(fakeRepository.addHoldingCalled);
+    }
+
+    @Test
+    public void invalidQuantity_isRejectedBeforeAnyStockLookup() {
+        Result result = execute("AAPL", "0", "150.00");
+
+        assertEquals("Quantity must be greater than zero.", result.error);
+        assertFalse("local checks run first, no network call", fakeStockSearch.lookupCalled);
+    }
+
+    @Test
+    public void stockLookupFailure_isReportedAndNothingSaved() {
+        fakeStockSearch.errorToReturn = "Could not check the stock symbol. Please try again.";
+
+        Result result = execute("AAPL", "10", "150.00");
+
+        assertEquals("Could not check the stock symbol. Please try again.", result.error);
+        assertFalse(fakeRepository.addHoldingCalled);
     }
 
     private Result execute(String ticker, String quantity, String purchasePrice) {

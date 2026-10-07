@@ -57,7 +57,7 @@ public class FirebaseAuthRepositoryImpl implements AuthRepository {
     }
 
     @Override
-    public void register(String email, String password, AuthCallback<User> callback) {
+    public void register(String username, String email, String password, AuthCallback<User> callback) {
         firebaseAuth.createUserWithEmailAndPassword(email, password)
                 .addOnSuccessListener(authResult -> {
                     FirebaseUser firebaseUser = authResult.getUser();
@@ -65,8 +65,8 @@ public class FirebaseAuthRepositoryImpl implements AuthRepository {
                         callback.onError("Something went wrong. Please try again.");
                         return;
                     }
-                    createUserProfile(firebaseUser, email);
-                    callback.onSuccess(new User(firebaseUser.getUid(), email));
+                    createUserProfile(firebaseUser, username, email);
+                    callback.onSuccess(new User(firebaseUser.getUid(), email, username));
                 })
                 .addOnFailureListener(exception -> {
                     if (exception instanceof FirebaseAuthUserCollisionException) {
@@ -122,8 +122,9 @@ public class FirebaseAuthRepositoryImpl implements AuthRepository {
                 });
     }
 
-    private void createUserProfile(@NonNull FirebaseUser firebaseUser, String email) {
+    private void createUserProfile(@NonNull FirebaseUser firebaseUser, String username, String email) {
         Map<String, Object> profile = new HashMap<>();
+        profile.put("username", username);
         profile.put("email", email);
         profile.put("createdAt", System.currentTimeMillis());
         firestore.collection(USERS_COLLECTION)

@@ -9,7 +9,8 @@ import com.portfolioiq.domain.model.User;
  */
 public interface AuthRepository {
 
-    void register(String email, String password, AuthCallback<User> callback);
+    /** username is already validated and trimmed by RegisterUseCase. */
+    void register(String username, String email, String password, AuthCallback<User> callback);
 
     void login(String email, String password, AuthCallback<User> callback);
 

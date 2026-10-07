@@ -18,6 +18,7 @@ public class FakeAuthRepository implements AuthRepository {
     public boolean registerCalled = false;
     public boolean loginCalled = false;
     public boolean sendPasswordResetCalled = false;
+    public String lastUsername;
     public String lastEmail;
     public String lastPassword;
 
@@ -26,8 +27,9 @@ public class FakeAuthRepository implements AuthRepository {
     public String errorToReturn = null;
 
     @Override
-    public void register(String email, String password, AuthCallback<User> callback) {
+    public void register(String username, String email, String password, AuthCallback<User> callback) {
         registerCalled = true;
+        lastUsername = username;
         lastEmail = email;
         lastPassword = password;
         if (errorToReturn != null) {

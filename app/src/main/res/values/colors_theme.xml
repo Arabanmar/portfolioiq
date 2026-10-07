@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light theme (doctor's feedback, Sprint 3): every layout uses these
+         semantic names instead of the old dark navy/cream values directly,
+         so the whole app's look can be changed here in one place. -->
+    <color name="piq_background">#FBF8F1</color>      <!-- screen background (cream) -->
+    <color name="piq_surface">#FFFFFF</color>         <!-- input fields, cards, list rows -->
+    <color name="piq_text_primary">#1F2A44</color>    <!-- main text (navy) -->
+    <color name="piq_text_secondary">#5B6478</color>  <!-- labels, secondary text -->
+    <color name="piq_text_hint">#8D96AC</color>       <!-- input hints -->
+    <color name="piq_accent">#C99A3D</color>          <!-- primary buttons (gold) -->
+    <color name="piq_on_accent">#1F2A44</color>       <!-- text on gold buttons -->
+    <color name="piq_accent_text">#8C6A1E</color>     <!-- links/accent text, darker gold for contrast on cream -->
+    <color name="piq_primary">#1F2A44</color>         <!-- secondary (navy) buttons -->
+    <color name="piq_on_primary">#FFFFFF</color>      <!-- text on navy buttons -->
+    <color name="piq_error">#B3261E</color>           <!-- error messages -->
+</resources>
