@@ -21,13 +21,17 @@ Stories shipped so far: 001 Registration, 002 Login & Authentication
 Calculations (Sprint 2). After the doctor's Sprint 2 review: a light-only
 theme, a required username at sign-up, and a stock search dropdown on the
 Add/Edit Holding screen that only lets real stock symbols be saved.
-Stories 005 (AI Portfolio Analysis) and 006 (AI
-Chat Assistant) are planned but not started — they will use Firebase AI
-Logic (Gemini) and must follow the architecture rule below.
+Stories 005 (AI Portfolio Analysis) and 006 (AI Chat Assistant) use
+TradingAgents (github.com/TauricResearch/TradingAgents), the open-source
+multi-agent analyst the doctor chose, running with Gemini on a small
+Python server in `ai-server/` (see its README). They follow the
+architecture rule below.
 
 External services: Firebase Authentication + Cloud Firestore (accounts
-and data storage), Finnhub (free tier, live stock quotes). No custom
-backend server — the Android app talks to these directly.
+and data storage), Finnhub (free tier, live stock quotes), and the
+PortfolioIQ AI server (`ai-server/`, FastAPI + TradingAgents + Gemini),
+which the app calls over HTTP through `AiAnalysisRepository`. The Gemini
+key lives only in `ai-server/.env` (gitignored), never in the app.
 
 ## Architecture summary
 
@@ -76,11 +80,12 @@ with success or a user-safe error message → Activity updates the UI.
 
 **Architecture rule that must hold for every future story**: the app
 computes every number shown to the user (position value, P/L, P/L%,
-allocation%, etc. — see `GetPortfolioUseCase`). When Story 005/006 add
-the LLM (Firebase AI Logic / Gemini), the LLM is only ever handed
-already-computed numbers to interpret or explain — it never calculates
-anything itself, and its responses should be structured JSON the app
-parses into UI, not free text.
+allocation%, etc. — see `GetPortfolioUseCase`). Stories 005/006 keep
+the same rule on the AI server: `ai-server/piq_server/metrics.py`
+calculates the portfolio numbers (diversification score, risk %) in plain
+Python, and Gemini is only handed those numbers plus TradingAgents'
+per-stock ratings to explain. It never calculates anything itself, and
+the summary comes back as structured JSON the app parses into UI.
 
 ## UseCase convention
 

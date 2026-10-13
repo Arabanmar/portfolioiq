@@ -17,6 +17,11 @@ if (localPropertiesFile.exists()) {
     localProperties.load(FileInputStream(localPropertiesFile))
 }
 val finnhubApiKey: String = localProperties.getProperty("FINNHUB_API_KEY", "")
+// Stories 005/006: where the PortfolioIQ AI server (ai-server/) runs.
+// 10.0.2.2 is the laptop as seen from the Android emulator. The token is
+// optional and must match PIQ_SERVER_TOKEN in ai-server/.env if set.
+val aiServerUrl: String = localProperties.getProperty("AI_SERVER_URL", "http://10.0.2.2:8000")
+val aiServerToken: String = localProperties.getProperty("AI_SERVER_TOKEN", "")
 
 android {
     namespace = "com.portfolioiq"
@@ -34,6 +39,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "FINNHUB_API_KEY", "\"$finnhubApiKey\"")
+        buildConfigField("String", "AI_SERVER_URL", "\"$aiServerUrl\"")
+        buildConfigField("String", "AI_SERVER_TOKEN", "\"$aiServerToken\"")
     }
 
     buildFeatures {
