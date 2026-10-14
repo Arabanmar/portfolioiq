@@ -56,12 +56,14 @@ fi
 # ---- 2. AI server tests ----------------------------------------------------
 echo "== 2/2 AI server tests (pytest, fake AI mode) =="
 PY=""
+SERVER_SKIPPED=0
 for p in "$ROOT/ai-server/.venv/Scripts/python.exe" "$ROOT/ai-server/.venv/bin/python"; do
     if [ -x "$p" ] || [ -f "$p" ]; then PY="$p"; break; fi
 done
 if [ -z "$PY" ]; then
     SERVER_LINE="AI server tests: SKIPPED (ai-server/.venv not found: run ai-server/setup_server.bat first)"
     SERVER_OK=1
+    SERVER_SKIPPED=1
 else
     PYTEST_OUT=$(cd "$ROOT/ai-server" && "$PY" -m pytest -q 2>&1)
     PYTEST_EXIT=$?
@@ -76,7 +78,11 @@ echo "== Summary =="
 echo "$ANDROID_LINE"
 echo "$SERVER_LINE"
 if [ "$ANDROID_OK" -eq 1 ] && [ "$SERVER_OK" -eq 1 ]; then
-    echo "RESULT: PASS"
+    if [ "$SERVER_SKIPPED" -eq 1 ]; then
+        echo "RESULT: PASS (ai-server tests SKIPPED, only the Android tests ran)"
+    else
+        echo "RESULT: PASS"
+    fi
     exit 0
 fi
 echo "RESULT: FAIL"

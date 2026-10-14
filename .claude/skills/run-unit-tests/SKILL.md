@@ -21,12 +21,16 @@ This skill produces that number the same way every time.
    `app/src/test/`), counts the results from Gradle's XML reports, then runs
    `pytest` for `ai-server/` with its own Python environment (fake AI mode,
    no Gemini key used). It ends with a `== Summary ==` block and a
-   `RESULT: PASS` or `RESULT: FAIL` line.
+   `RESULT: PASS`, `RESULT: PASS (ai-server tests SKIPPED, ...)` or
+   `RESULT: FAIL` line. The SKIPPED form is not a full pass: only the
+   Android tests ran.
 
 2. Report back:
    - the `== Summary ==` block, copied exactly;
-   - for any failure, the failing test names the script lists and the first
-     lines of the error;
+   - for any failure, the names of the failing test classes the script lists
+     (it prints classes, not individual test names), then open that class's
+     report in `app/build/test-results/testDebugUnitTest/` for the exact
+     failing test and the first lines of the error;
    - any part that was skipped (for example the ai-server environment not
      set up yet) and what the human must do about it.
 

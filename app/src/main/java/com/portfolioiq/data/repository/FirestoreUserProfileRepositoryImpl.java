@@ -26,10 +26,16 @@ public class FirestoreUserProfileRepositoryImpl implements UserProfileRepository
     public void getUsername(String userId, ResultCallback<String> callback) {
         firestore.collection(USERS_COLLECTION).document(userId).get()
                 .addOnSuccessListener(snapshot -> {
-                    // getString() returns null when the document or the field
-                    // is missing (or isn't a string), which the use case
-                    // turns into "Welcome back" rather than an error.
-                    callback.onSuccess(snapshot.exists() ? snapshot.getString(FIELD_USERNAME) : null);
+                    String username = null;
+                    try {
+                        username = snapshot.exists() ? snapshot.getString(FIELD_USERNAME) : null;
+                    } catch (RuntimeException wrongFieldType) {
+                        // getString() returns null if the field is missing, but
+                        // throws if it exists with a non-string type. Treat that
+                        // as "no username" so the use case shows "Welcome back"
+                        // instead of crashing the dashboard.
+                    }
+                    callback.onSuccess(username);
                 })
                 .addOnFailureListener(exception -> callback.onError(GENERIC_ERROR));
     }
