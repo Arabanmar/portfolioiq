@@ -1,124 +1,120 @@
-# Lab 4: Custom Agents & Skills
+# Lab 4: Custom Agents and Skills
 
-Tool: Claude Code (the tool registered in Lab 1). Agents live in
-`.claude/agents/`, skills in `.claude/skills/`. Both are committed, so every
-team member's Claude Code session loads the same ones.
+We used Claude Code, the same tool we picked in Lab 1. The agents are in the
+.claude/agents folder and the skills are in the .claude/skills folder. They
+are committed to the repo, so everyone on the team gets the same ones.
 
-| Name | Kind | Job | What limits it |
-|---|---|---|---|
-| `code-reviewer` | Agent | Reviews changed files against CLAUDE.md and reports findings | Tool list: Read, Grep, Glob only. It cannot edit. |
-| `test-writer` | Agent | Writes JUnit/pytest tests, runs them, reports exact counts | A rule in its prompt (test folders only). Its tools can write anywhere. |
-| `new-use-case` | Skill (`/new-use-case`) | Adds a use case, repository contract, data class, fake and tests in the same order every time | Plan first, ask when unsure |
-| `run-unit-tests` | Skill (`/run-unit-tests`) | Runs every automated test and prints one summary block | `allowed-tools` lets it run only its own script |
+## What we made
 
-## Design rationale
+- code-reviewer (agent): checks changed files against our rules in
+  CLAUDE.md and lists what is wrong. It can only read files, so it cannot
+  change anything.
+- test-writer (agent): writes unit tests, runs them and reports the numbers.
+  Its instructions say it may only touch the test folders, but it has write
+  tools, so this is a rule it follows, not something it is blocked from.
+- new-use-case (skill): adds a new use case the same way every time. It plans
+  first, then makes the use case, the repository, the data class, a fake and
+  the tests.
+- run-unit-tests (skill): runs all our tests (Android and the AI server) and
+  prints one short summary.
 
-### code-reviewer (agent)
+## Why we made them this way
 
-- **Why this role:** until now every change was checked by hand against
-  CLAUDE.md, and the same problems kept coming back (a missing `userId`, a
-  mutable model, a test that can never fail). A reviewer with a fixed list
-  makes that a habit.
-- **Limit by tools, not by asking:** its `tools:` line gives it only Read,
-  Grep and Glob. It cannot edit even when told to. We tested this (see
-  evidence step 5). A reviewer that also fixes things is no longer a second
-  pair of eyes.
-- **Checklist tied to our rules:** each check points at a CLAUDE.md section
-  (architecture, UseCase convention, security, tests, UI), so every finding
-  traces back to a written rule.
-- **Named test evasions:** it lists the ways a test can pass without testing
-  anything (no assertion, `@Ignore`, a loosened assertion, asserting the
-  fake's own value). "Check the tests are good" is too vague to act on.
-- **Says what it did not check:** it cannot build or run tests, so it has to
-  say so. An APPROVE never means "it builds".
+### code-reviewer
 
-### test-writer (agent)
+- When we reviewed code by hand, the same mistakes kept coming back, like a
+  missing user id or a test that could never fail. A fixed checklist catches
+  them every time.
+- We gave it read tools only. A reviewer that also fixes the code is not
+  really a second check anymore. We tested this: when we asked it to fix
+  something, it said it could not.
+- Every check points to a rule in CLAUDE.md, so each finding has a reason.
+- It lists the common ways a test can pass without testing anything, like a
+  test with no assert or a test that only checks the fake's own value.
+- It has to say what it did not check. It cannot build the app or run tests,
+  so its approval does not mean the app builds.
 
-- **Why this role:** tests are where shortcuts hide, so writing them is a
-  separate job from writing the feature.
-- **Scope rule:** its prompt allows it to write only under `app/src/test/`
-  and `ai-server/tests/`. If a test finds a bug it must report it, not edit
-  production code or bend the test. This is a prompt rule only: it needs
-  Write, Edit and Bash to do its job, and those tools are not limited by
-  path. The code reviewer pointed this out (finding 5). In practice we check
-  `git status` after it runs; in this lab it changed one test file only.
-- **House style:** JUnit 4, hand-written fakes that record what they were
-  called with, one test per validation branch in the order the code checks
-  them. This matches the existing tests.
-- **Numbers, not belief:** it must finish by running the `run-unit-tests`
-  script and quoting the summary.
+### test-writer
 
-### new-use-case (skill)
+- Tests are where shortcuts hide, so writing them is a separate job from
+  writing the feature.
+- If a test finds a bug, it reports it. It does not change the app code or
+  weaken the test to make it pass.
+- The code reviewer pointed out that the "test folders only" limit is only an
+  instruction. So after it runs we check git status. In this lab it changed
+  one test file only.
+- It follows our test style: JUnit 4, hand-written fakes, one test for each
+  check in the code.
+- It has to finish by running the tests and showing the real numbers.
 
-- **Why a skill:** every feature repeats the same pieces (use case,
-  repository contract, data implementation, fake, test). The skill makes the
-  agent do them in the same order and shape every time.
-- **Plan before code:** it must show the inputs, the validations with their
-  exact messages and the repository choice before writing files, and ask the
-  human when CLAUDE.md doesn't settle something.
-- **Template file:** `template.md` holds skeletons for the use case,
-  repository contract, fake and test, modelled on `AddStockHoldingUseCase`.
-  It has no skeleton for the data-layer class; the skill only says what goes
-  there (the only place for Firebase or HTTP code, raw errors turned into
-  messages a user can read).
-- **Hand-offs:** it can pass the test step to `test-writer`, runs
-  `/run-unit-tests` at the end, and then suggests the `code-reviewer` agent,
-  so one command covers the whole small loop.
+### new-use-case
 
-### run-unit-tests (skill)
+- Every feature needs the same pieces: use case, repository, data class, fake
+  and tests. The skill makes them in the same order and style every time.
+- It has to show a plan before writing code, and ask us when CLAUDE.md does
+  not answer something, instead of guessing.
+- It comes with a template file based on our existing AddStockHoldingUseCase.
+- At the end it runs the tests and suggests a code review, so one command
+  covers the whole small loop.
 
-- **Why a skill:** "do the tests pass?" was answered differently each time
-  (reading the code, a javac run, Android Studio). One script answers it the
-  same way for everyone.
-- **What it runs:** `gradlew :app:testDebugUnitTest` for the Android unit
-  tests and `pytest` for the AI server (fake AI mode, no key used).
-- **A number you can repeat:** it counts results from Gradle's own XML
-  reports and deletes the previous run's report folder first, so an old green
-  run is never reported as a new one.
-- **Three endings:** `RESULT: PASS`, `RESULT: FAIL`, or
-  `RESULT: PASS (ai-server tests SKIPPED, only the Android tests ran)` when the
-  Python environment isn't set up. The third is not a full pass. It was added
-  after the code review (finding 2).
-- **Fails loudly:** if Gradle cannot start (for example no Java), it prints
-  "DID NOT RUN" instead of reporting zero failures.
+### run-unit-tests
 
-## Evidence of use on real project work
+- Before this, "do the tests pass?" was answered in a different way each time.
+  Now one script answers it the same way for everyone.
+- It runs the Android unit tests with Gradle and the AI server tests with
+  pytest. The AI server tests use fake mode, so no API key is needed.
+- It deletes old results before running, so an old passing run is never
+  reported as a new one.
+- It ends with one of three results: PASS, FAIL, or PASS with the AI server
+  tests skipped (when Python is not set up). The third one is not a full pass.
+- If Gradle cannot start, it says the tests did not run instead of saying
+  zero failed.
 
-Feature: the dashboard greets the signed-in user by the username saved at
-sign-up ("Welcome, <username>", or "Welcome back" if there is none). This
-finishes the Sprint 3 username work from the doctor's review.
+## How we used them on real work
 
-Full transcript: `references/Lab4_ClaudeCodeSession.md` (exported from
-Claude Code's own session log, 2026-10-14, 01:07 to 01:33 UTC). Branch:
-`lab4/agents-and-skills`.
+The feature: the dashboard now says "Welcome, <username>" using the name
+saved at sign-up, or "Welcome back" if there is no name. This finishes the
+username change the doctor asked for in Sprint 3.
 
-| # | Time (UTC) | What we asked | What happened |
-|---|---|---|---|
-| 1 | 01:08 | `/new-use-case GetUserProfileUseCase "..."` | Read the template and existing code first, searched for an existing profile reader, then created `UserProfileRepository`, `GetUserProfileUseCase`, `FirestoreUserProfileRepositoryImpl`, a fake and 8 tests, and wired the dashboard. Ran `/run-unit-tests`: 73 Android + 12 pytest, PASS. |
-| 2 | 01:13 | `test-writer` agent: check and complete the tests | Found gaps (empty and tab-only ids and usernames, double callbacks not detectable). Added 10 tests, 18 in the class, only the test file changed, no bug found. The main session re-ran the suite itself instead of trusting the report: 83 + 12, PASS. |
-| 3 | 01:16 | `/run-unit-tests` | `83 run, 0 failed, 0 errors, 0 skipped` and `12 passed`, `RESULT: PASS`. |
-| 4 | 01:17 | `code-reviewer` agent: review every file changed vs `main` | 16 files reviewed. No blocking issues, 6 should-fix, several nits. Most important: `getString()` can throw on a wrong field type and would crash the dashboard; the script printed a bare PASS when the AI-server tests were skipped; no `.gitattributes`; our own docs overstated the test-writer limit. |
-| 5 | 01:23 | Asked the reviewer to fix a finding itself | It said it cannot: it has Read, Grep and Glob only. It sent back the fix in words for someone with edit access. The tool limit held. |
-| 6 | 01:23 | Commit the feature | `c140d3e` "Dashboard: greet the signed-in user by username" (7 files). |
-| 7 | 01:25 | Fix findings 1 to 4, run tests, commit | try/catch around `getString`, the SKIPPED result line, `.gitattributes` with `*.sh text eol=lf`, SKILL.md wording. Tested the skipped path with a copy of the script. 83 + 12, PASS. Commit `329359d`. |
-| 8 | 01:27 | `code-reviewer` agent: review only the fix commit | Items 1, 2 and 4 fixed, item 3 only partly: `gradlew` has no `.sh` extension, so it was not covered. Also flagged this doc's outdated line about the script's output. |
-| 9 | 01:30 | Apply the follow-ups, run tests, commit | Added `gradlew text eol=lf` and `*.bat text eol=crlf`, renamed the failure header. 83 + 12, PASS. Commit `eb04d95`. Branch pushed. |
+The full session is in references/Lab4_ClaudeCodeSession.md, taken from
+Claude Code's own log (14 October 2026).
 
-### What the agents caught that we would have missed
+1. We ran /new-use-case for GetUserProfileUseCase. It read our existing code
+   first, then made the use case, repository, Firestore class, a fake and 8
+   tests, and added the greeting to the dashboard. Tests: 73 Android and 12
+   AI server, all passed.
+2. We asked the test-writer agent to check the tests. It found missing cases
+   (empty or blank names and ids, and a callback being called twice) and
+   added 10 tests, 18 in total. It only changed the test file. Claude Code
+   then ran the tests again itself instead of trusting the report.
+3. We ran /run-unit-tests: 83 Android tests and 12 AI server tests, 0 failed.
+4. We asked the code-reviewer agent to review all 16 changed files. Nothing
+   was blocking, but it found 6 things to fix. The most important one: reading
+   the username could crash the dashboard if the field had the wrong type.
+5. We asked the reviewer to fix that itself. It could not, because it only
+   has read tools. It explained the fix instead.
+6. The feature was committed (c140d3e).
+7. Claude Code fixed the first 4 findings, ran the tests again (all passed)
+   and committed the fixes (329359d).
+8. We asked the reviewer to check only that fix. It found one fix was not
+   complete: the gradlew file was not covered by the line ending rule.
+9. Claude Code fixed that, ran the tests again (all passed) and committed it
+   (eb04d95).
 
-- The `getString()` crash risk was in code Claude Code had just written, with
-  a wrong comment explaining why it was safe. The reviewer caught it.
-- The review of the fix commit caught that the first fix was incomplete
-  (`gradlew`). One review pass would not have been enough.
-- The reviewer caught our own documentation overstating a limit. The table at
-  the top of this file now says which limits come from tools and which are
-  only prompt rules.
+## What the agents caught
 
-### Known gaps
+- The crash risk was in code Claude Code had just written. The reviewer found
+  it.
+- The second review found that the first fix was not complete. One review was
+  not enough.
+- The reviewer also found that our own notes said test-writer was limited to
+  test folders by its tools, which was wrong. We fixed the notes.
 
-- The new catch branch in `FirestoreUserProfileRepositoryImpl` has no test,
-  because the class needs Firebase. Manual check: set `username` to a number
-  in the Firestore console and open the dashboard. It should show
-  "Welcome back".
-- The reviewer noted that about 5 of the 18 tests overlap with others, so the
-  count is a little inflated.
+## Known gaps
+
+- The new error handling in FirestoreUserProfileRepositoryImpl has no unit
+  test, because that class needs Firebase. To check it by hand, set the
+  username to a number in the Firestore console and open the dashboard. It
+  should show "Welcome back".
+- The reviewer said about 5 of the 18 tests repeat other tests, so the count
+  is a little higher than it needs to be.
