@@ -46,7 +46,7 @@ else
     ANDROID_LINE="Android unit tests: $tests run, $failures failed, $errors errors, $skipped skipped (gradle exit $GRADLE_EXIT)"
     if [ "$GRADLE_EXIT" -eq 0 ] && [ "$failures" -eq 0 ] && [ "$errors" -eq 0 ]; then ANDROID_OK=1; else ANDROID_OK=0; fi
     if [ "$failures" -gt 0 ] || [ "$errors" -gt 0 ]; then
-        echo "Failing tests:"
+        echo "Failing test classes:"
         grep -l -E '<failure|<error' "$RESULTS"/TEST-*.xml 2>/dev/null | while read -r f; do
             echo "  in $(basename "$f" .xml | sed 's/^TEST-//')"
         done
