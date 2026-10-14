@@ -114,11 +114,8 @@ Claude Code's own session log, 2026-10-14, 01:07 to 01:33 UTC). Branch:
   the top of this file now says which limits come from tools and which are
   only prompt rules.
 
-### Still not verified
+### Known gaps
 
-- The greeting has not been seen on a phone or emulator yet. Gradle compiled
-  everything and the unit tests ran, but the app itself has not been run with
-  this change.
 - The new catch branch in `FirestoreUserProfileRepositoryImpl` has no test,
   because the class needs Firebase. Manual check: set `username` to a number
   in the Firestore console and open the dashboard. It should show
