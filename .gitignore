@@ -21,6 +21,9 @@ gradle/gradle-daemon-jvm.properties
 
 # AI server: the real .env holds the Gemini key, never commit it
 ai-server/.env
+# any copy of it too (Notepad can save one as .env.txt)
+ai-server/.env*
+!ai-server/.env.example
 ai-server/.venv/
 ai-server/data/
 __pycache__/

@@ -183,6 +183,20 @@ pattern:
   you're adding a new top-level collection, give it the same
   owner-scoped rule — don't assume Firestore is still open.
 
+## Agents and skills
+
+Committed in `.claude/` so every session uses the same ones (Lab 4; design
+rationale in `references/Lab4_AgentsAndSkills.md`):
+
+- `code-reviewer` agent: read-only (Read, Grep, Glob). Run it on the
+  changed files before any pull request. It reports, it never edits.
+- `test-writer` agent: writes tests under `app/src/test/` and
+  `ai-server/tests/` only, never production code, and reports exact counts.
+- `/new-use-case <Name> "<purpose>"`: the standard way to add a use case
+  (plan first, then use case, repository contract, data impl, fake, tests).
+- `/run-unit-tests`: the standard way to answer "do the tests pass?".
+  Quote its `== Summary ==` block; never claim a pass without it.
+
 ## Definition of done
 
 A story/task isn't done until all of these hold, not just "the feature
