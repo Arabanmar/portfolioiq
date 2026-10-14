@@ -9,6 +9,9 @@ A dated record of project decisions, kept in-repo so they're independently verif
 | 2026-09-30 | Firestore security rules intentionally left in open "test mode" for the duration of active development ("firebase later" — deferred, not forgotten). Documented as a known, open gap in `CLAUDE.md` rather than left unstated. | `CLAUDE.md`, "Coding standards" section, merged in PR #4 (`9dfb379`). |
 | 2026-10-04 | Firestore security rules closed: real `allow read, write` rules scoped to `request.auth.uid == userId` published to the production Firebase project, replacing test mode. | Firebase Console → Firestore → Rules → publish history (dated 2026-10-04). |
 | 2026-10-04 | `FINNHUB_API_KEY` regenerated and distributed to the team via `local.properties` (per-developer, gitignored — never committed) after the original key was found missing from two developers' local setups. | Team message thread; `local.properties` is listed in `.gitignore`, and `git log --all -- local.properties` returns no results — confirmed absent from the full git history, not just assumed from the ignore rule. |
+| 2026-10-07 | Doctor's Sprint 2 review: light theme, required username at sign-up, stock search dropdown that rejects unknown tickers. AI analyst for Stories 005/006 to be an existing GitHub project, compared and chosen by the doctor. | Merged in PR #15 (`afc7fb2`). |
+| 2026-10-07 | AI analyst: the doctor chose **TradingAgents** (TauricResearch, Apache-2.0) from the team's comparison of six GitHub projects. | Team comparison document `PortfolioIQ_AI_Analyst_Options.pdf`. |
+| 2026-10-13 | TradingAgents runs on a small Python server (`ai-server/`, FastAPI) with Gemini, rather than inside the app, because it is a Python framework. The app calls it over HTTP; portfolio numbers are still computed in code, not by the LLM. | `ai-server/` and the Story 005/006 commit on `main`. |
 
 ## Why this file exists
 

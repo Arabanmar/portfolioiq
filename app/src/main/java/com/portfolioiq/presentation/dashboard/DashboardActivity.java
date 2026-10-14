@@ -23,6 +23,7 @@ import com.portfolioiq.domain.repository.ResultCallback;
 import com.portfolioiq.domain.repository.StockPriceRepository;
 import com.portfolioiq.domain.usecase.DeleteStockHoldingUseCase;
 import com.portfolioiq.domain.usecase.GetPortfolioUseCase;
+import com.portfolioiq.presentation.analysis.AnalysisActivity;
 import com.portfolioiq.presentation.portfolio.AddEditHoldingActivity;
 
 import java.util.Locale;
@@ -69,6 +70,9 @@ public class DashboardActivity extends AppCompatActivity {
 
         addHoldingButton.setOnClickListener(v ->
                 startActivity(new Intent(this, AddEditHoldingActivity.class)));
+        Button aiAnalysisButton = findViewById(R.id.aiAnalysisButton);
+        aiAnalysisButton.setOnClickListener(v ->
+                startActivity(new Intent(this, AnalysisActivity.class)));
     }
 
     @Override

@@ -38,6 +38,17 @@ config, the other a personal API key):
    key from your dashboard). Without this line, the app still builds and
    runs, but the portfolio dashboard won't be able to fetch live prices.
 
+   Optional, for the AI analysis: `AI_SERVER_URL=http://10.0.2.2:8000`
+   is the default (the laptop as seen from the emulator), so you only need
+   this line to point somewhere else. If the server sets
+   `PIQ_SERVER_TOKEN`, add the same value as `AI_SERVER_TOKEN=...`.
+
+3. **The AI server** (only for the AI Analysis and chat screens): see
+   [`ai-server/README.md`](ai-server/README.md). In short: run
+   `ai-server/setup_server.bat` once, put your Gemini key in
+   `ai-server/.env`, then keep `ai-server/start_server.bat` running while
+   you use the app.
+
 Once both are in place: open the project in Android Studio, let Gradle
 sync, and run it on an emulator or device (**Run → Run 'app'**), or just
 compile it without running anything (**Build → Compile All Sources**, or

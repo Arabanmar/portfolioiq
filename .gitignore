@@ -18,3 +18,10 @@ app/google-services.json
 
 # Machine-specific Gradle toolchain file
 gradle/gradle-daemon-jvm.properties
+
+# AI server: the real .env holds the Gemini key, never commit it
+ai-server/.env
+ai-server/.venv/
+ai-server/data/
+__pycache__/
+.pytest_cache/

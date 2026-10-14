@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/piq_background"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="48dp"
+    android:paddingBottom="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ask PortfolioIQ"
+        android:textColor="@color/piq_text_primary"
+        android:textSize="26sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Questions about your analysed portfolio"
+        android:textColor="@color/piq_text_secondary"
+        android:textSize="14sp" />
+
+    <ScrollView
+        android:id="@+id/messagesScroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/messagesContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/errorText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/piq_error"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/questionInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@color/piq_surface"
+            android:hint="e.g. Which stock is my biggest risk?"
+            android:inputType="textCapSentences|textMultiLine"
+            android:maxLength="500"
+            android:maxLines="4"
+            android:padding="14dp"
+            android:textColor="@color/piq_text_primary"
+            android:textColorHint="@color/piq_text_hint" />
+
+        <Button
+            android:id="@+id/sendButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Send"
+            android:textColor="@color/piq_on_accent"
+            android:backgroundTint="@color/piq_accent" />
+    </LinearLayout>
+
+</LinearLayout>

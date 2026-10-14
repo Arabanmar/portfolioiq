@@ -1,0 +1,9 @@
+# TradingAgents, pinned to the exact version this server was written and tested against.
+# Installing it from GitHub needs Git (already installed for this project).
+tradingagents @ git+https://github.com/TauricResearch/TradingAgents.git@1394a3f72aa4393e1a98f51b382434c4b4c2d972
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-dotenv>=1.0
+# Only for running the tests (run_tests.bat)
+pytest>=8.0
+httpx>=0.27
