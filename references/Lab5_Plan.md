@@ -8,6 +8,9 @@ The next piece of work is the doctor's Sprint 3 review of the AI analyst:
 3. "Does the bot read news?" It does, but the app never shows it.
 4. "Is the analysis neutral?" The agents debate for and against, but the app
    only shows the final decision.
+5. "Why does it take about 4 minutes per stock?" Each stock needs roughly
+   15 to 25 Gemini calls in a row, plus live data downloads, and the free
+   Gemini plan limits requests per minute.
 
 Each issue below is a vertical slice: server logic, the JSON the app reads,
 the screen, and tests, in one small change. They are ordered with
@@ -91,6 +94,34 @@ the Bull and Bear researchers' arguments (`investment_debate_state`).
 App: "For" and "Against" under each stock, before the final rating.
 
 Tests: pytest that both are present and trimmed.
+
+## Issue E: Reuse today's result (faster analysis)
+
+Blocked by: Issue D
+
+Why: the doctor asked why one stock takes about 4 minutes. Most of the time
+is Gemini calls, so the cheapest speed-up with no quality loss is to not
+repeat work: a stock analysed today does not need the agents again today.
+
+Server (`agents.py`, new `cache.py`):
+- Save each stock's TradingAgents result (rating, decision, confidence,
+  news, for and against) to `ai-server/data/cache/<date>/<TICKER>.json`
+  after a successful run.
+- Before running the agents for a stock, use the saved file if it exists
+  for today's date. Portfolio numbers, risk and the summary are still
+  computed fresh, because the quantities may have changed.
+- Add `"fromCache": true/false` per stock, and log the seconds each stock
+  took in the server window.
+- Fake mode: the cache works the same way (tests use a temporary folder).
+
+App: next to a stock, show "Saved result from today" when `fromCache` is
+true. The progress text says "Using today's saved result for AAPL".
+
+Tests: pytest that the second analysis of the same stock on the same day
+does not call the agents again, that a new day does, and that a failed run
+is not saved.
+
+Done when: running AAPL twice in a row, the second run finishes in seconds.
 
 ## The loop for each issue (Claude Code)
 
