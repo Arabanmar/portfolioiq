@@ -12,6 +12,7 @@ Endpoints
 
 from __future__ import annotations
 
+import os
 import re
 
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -19,6 +20,30 @@ from pydantic import BaseModel, Field, field_validator
 
 from piq_server import jobs, settings, summarizer
 from piq_server.metrics import Holding
+
+
+
+def _turn_off_windows_quick_edit() -> None:
+    """Windows pauses a console program while text is selected in its window
+    (the title then starts with "Select"). One accidental click in the server
+    window would freeze the server, and the app would report that it can't
+    reach it. Turning off Quick Edit stops that from happening."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-10)  # STD_INPUT_HANDLE
+        mode = ctypes.c_uint32()
+        if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            ENABLE_QUICK_EDIT_MODE, ENABLE_EXTENDED_FLAGS = 0x0040, 0x0080
+            kernel32.SetConsoleMode(handle, (mode.value & ~ENABLE_QUICK_EDIT_MODE) | ENABLE_EXTENDED_FLAGS)
+    except Exception:
+        pass  # not a real console (e.g. tests); nothing to do
+
+
+_turn_off_windows_quick_edit()
 
 app = FastAPI(title="PortfolioIQ AI server")
 

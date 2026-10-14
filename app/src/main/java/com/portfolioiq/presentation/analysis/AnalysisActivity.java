@@ -45,6 +45,8 @@ public class AnalysisActivity extends AppCompatActivity {
     private static final long POLL_INTERVAL_MS = 4000;
     private static final String STATE_JOB_ID = "job_id";
     private static final int DECISION_PREVIEW_CHARS = 600;
+    /** A slow laptop can miss one progress check while the agents are busy; give up only after several in a row. */
+    private static final int MAX_POLL_FAILURES = 5;
 
     private GetPortfolioUseCase getPortfolioUseCase;
     private StartPortfolioAnalysisUseCase startAnalysisUseCase;
@@ -52,6 +54,8 @@ public class AnalysisActivity extends AppCompatActivity {
 
     private final Handler pollHandler = new Handler(Looper.getMainLooper());
     private String jobId;
+    private boolean jobFailed = false;
+    private int pollFailures = 0;
     private boolean destroyed = false;
 
     private View progressSection;
@@ -79,8 +83,17 @@ public class AnalysisActivity extends AppCompatActivity {
         Button askButton = findViewById(R.id.askButton);
 
         retryButton.setOnClickListener(v -> {
-            jobId = null;
-            loadPortfolioAndStart();
+            if (jobId != null && !jobFailed) {
+                // The analysis may still be running on the server: check it again
+                // instead of starting a new one from the beginning.
+                pollFailures = 0;
+                showProgress("Checking the analysis...");
+                poll();
+            } else {
+                jobId = null;
+                jobFailed = false;
+                loadPortfolioAndStart();
+            }
         });
         askButton.setOnClickListener(v -> startActivity(ChatActivity.intent(this, jobId)));
 
@@ -147,11 +160,13 @@ public class AnalysisActivity extends AppCompatActivity {
             @Override
             public void onSuccess(AnalysisProgress progress) {
                 if (destroyed) return;
+                pollFailures = 0;
                 switch (progress.getStatus()) {
                     case DONE:
                         showResult(progress.getAnalysis());
                         break;
                     case FAILED:
+                        jobFailed = true;
                         showError(progress.getError());
                         break;
                     default:
@@ -162,7 +177,15 @@ public class AnalysisActivity extends AppCompatActivity {
 
             @Override
             public void onError(String message) {
-                if (!destroyed) showError(message);
+                if (destroyed) return;
+                pollFailures++;
+                if (pollFailures < MAX_POLL_FAILURES) {
+                    showProgress("Still waiting for the AI server (try " + (pollFailures + 1) + " of "
+                            + MAX_POLL_FAILURES + ")...");
+                    pollHandler.postDelayed(AnalysisActivity.this::poll, POLL_INTERVAL_MS);
+                } else {
+                    showError(message);
+                }
             }
         });
     }
