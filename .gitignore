@@ -28,3 +28,7 @@ ai-server/.venv/
 ai-server/data/
 __pycache__/
 .pytest_cache/
+
+# Lab 4: raw Claude Code session log (has old demo keys from Sept). Only the
+# cleaned transcript references/Lab4_ClaudeCodeSession.md is committed.
+references/*-raw.jsonl
