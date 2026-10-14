@@ -15,6 +15,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.portfolioiq.R;
 import com.portfolioiq.data.repository.FinnhubStockPriceRepositoryImpl;
 import com.portfolioiq.data.repository.FirestorePortfolioRepositoryImpl;
+import com.portfolioiq.data.repository.FirestoreUserProfileRepositoryImpl;
 import com.portfolioiq.domain.model.HoldingPosition;
 import com.portfolioiq.domain.model.PortfolioSummary;
 import com.portfolioiq.domain.model.StockHolding;
@@ -23,6 +24,7 @@ import com.portfolioiq.domain.repository.ResultCallback;
 import com.portfolioiq.domain.repository.StockPriceRepository;
 import com.portfolioiq.domain.usecase.DeleteStockHoldingUseCase;
 import com.portfolioiq.domain.usecase.GetPortfolioUseCase;
+import com.portfolioiq.domain.usecase.GetUserProfileUseCase;
 import com.portfolioiq.presentation.analysis.AnalysisActivity;
 import com.portfolioiq.presentation.portfolio.AddEditHoldingActivity;
 
@@ -47,9 +49,11 @@ public class DashboardActivity extends AppCompatActivity {
     private TextView totalProfitLossText;
     private TextView errorText;
     private TextView emptyStateText;
+    private TextView welcomeText;
 
     private GetPortfolioUseCase getPortfolioUseCase;
     private DeleteStockHoldingUseCase deleteStockHoldingUseCase;
+    private GetUserProfileUseCase getUserProfileUseCase;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +64,9 @@ public class DashboardActivity extends AppCompatActivity {
         StockPriceRepository stockPriceRepository = new FinnhubStockPriceRepositoryImpl();
         getPortfolioUseCase = new GetPortfolioUseCase(portfolioRepository, stockPriceRepository);
         deleteStockHoldingUseCase = new DeleteStockHoldingUseCase(portfolioRepository);
+        getUserProfileUseCase = new GetUserProfileUseCase(new FirestoreUserProfileRepositoryImpl());
 
+        welcomeText = findViewById(R.id.welcomeText);
         holdingsContainer = findViewById(R.id.holdingsContainer);
         totalValueText = findViewById(R.id.totalValueText);
         totalProfitLossText = findViewById(R.id.totalProfitLossText);
@@ -82,6 +88,22 @@ public class DashboardActivity extends AppCompatActivity {
         // Add/Edit/Delete (or just background price movement) shows current
         // numbers instead of the ones from whenever onCreate last ran.
         loadPortfolio();
+        loadGreeting();
+    }
+
+    private void loadGreeting() {
+        getUserProfileUseCase.execute(currentUserId(), new ResultCallback<String>() {
+            @Override
+            public void onSuccess(String greeting) {
+                welcomeText.setText(greeting);
+                welcomeText.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onError(String message) {
+                showError(message);
+            }
+        });
     }
 
     private void loadPortfolio() {
