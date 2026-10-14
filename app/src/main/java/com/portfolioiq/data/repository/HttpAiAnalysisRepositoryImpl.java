@@ -2,6 +2,7 @@ package com.portfolioiq.data.repository;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import com.portfolioiq.BuildConfig;
 import com.portfolioiq.domain.model.AnalysisProgress;
@@ -19,7 +20,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -39,8 +42,9 @@ import java.util.concurrent.Executors;
  */
 public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
 
-    private static final String UNREACHABLE =
-            "Can't reach the AI server. Make sure it's running on your laptop (ai-server/start_server.bat).";
+    private static final String TAG = "PortfolioIQ-AI";
+    private static final int CONNECT_TIMEOUT_MS = 20_000;
+    private static final int READ_TIMEOUT_MS = 30_000;
     private static final String GENERIC_ERROR = "Something went wrong with the AI analysis. Please try again.";
 
     private final String baseUrl = trimSlash(BuildConfig.AI_SERVER_URL);
@@ -63,13 +67,13 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
                 holdings.put(h);
             }
             JSONObject body = new JSONObject().put("holdings", holdings);
-            return request("POST", "/analysis", body, 15_000).getString("jobId");
+            return request("POST", "/analysis", body, READ_TIMEOUT_MS).getString("jobId");
         });
     }
 
     @Override
     public void getProgress(String jobId, ResultCallback<AnalysisProgress> callback) {
-        run(callback, () -> parseProgress(request("GET", "/analysis/" + jobId, null, 15_000)));
+        run(callback, () -> parseProgress(request("GET", "/analysis/" + jobId, null, READ_TIMEOUT_MS)));
     }
 
     @Override
@@ -96,11 +100,33 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
             } catch (ServerError e) {
                 mainHandler.post(() -> callback.onError(e.getMessage()));
             } catch (IOException e) {
-                mainHandler.post(() -> callback.onError(UNREACHABLE));
+                // Logged so Android Studio's Logcat shows the real cause (filter: PortfolioIQ-AI).
+                Log.w(TAG, "AI server call to " + baseUrl + " failed", e);
+                String message = connectionMessage(e);
+                mainHandler.post(() -> callback.onError(message));
             } catch (Exception e) {
+                Log.w(TAG, "AI server response could not be read", e);
                 mainHandler.post(() -> callback.onError(GENERIC_ERROR));
             }
         });
+    }
+
+    /**
+     * Says which kind of network problem happened and which address the app
+     * used, so "can't reach the server" can be told apart from "the server is
+     * too slow" when debugging.
+     */
+    String connectionMessage(IOException e) {
+        if (e instanceof SocketTimeoutException) {
+            return "The AI server at " + baseUrl + " took too long to answer. "
+                    + "Check the server window is still running (press Esc in it if its title says Select), then tap Retry.";
+        }
+        if (e instanceof ConnectException) {
+            return "Can't connect to the AI server at " + baseUrl + ". "
+                    + "Start it with ai-server/start_server.bat, then tap Retry.";
+        }
+        return "Can't reach the AI server at " + baseUrl + " (" + e.getClass().getSimpleName() + "). "
+                + "Make sure it's running (ai-server/start_server.bat), then tap Retry.";
     }
 
     /** A user-safe message the server sent back with an error status. */
@@ -114,7 +140,7 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
         HttpURLConnection connection = (HttpURLConnection) new URL(baseUrl + path).openConnection();
         try {
             connection.setRequestMethod(method);
-            connection.setConnectTimeout(10_000);
+            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
             connection.setReadTimeout(readTimeoutMs);
             connection.setRequestProperty("Accept", "application/json");
             if (token != null && !token.isEmpty()) {
