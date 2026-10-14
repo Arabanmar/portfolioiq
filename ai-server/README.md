@@ -29,7 +29,10 @@ everything in one stock.
 
 ## Run it (Windows)
 
-Needs Python 3.11 or newer (3.13 recommended) and Git.
+Needs Python 3.13 (3.11, 3.12 or 3.14 also work) and Git. Python 3.15 does not
+work yet: some packages have no ready-made Windows build for it. If you have
+the Python install manager, `py install 3.13` adds 3.13 next to any other version;
+`setup_server.bat` picks it automatically.
 
 1. Double-click `setup_server.bat` (one time; takes a few minutes).
 2. Open `.env` in Notepad and paste your Gemini key after `GOOGLE_API_KEY=`.
