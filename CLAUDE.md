@@ -192,6 +192,8 @@ rationale in `references/Lab4_AgentsAndSkills.md`):
   changed files before any pull request. It reports, it never edits.
 - `test-writer` agent: writes tests under `app/src/test/` and
   `ai-server/tests/` only, never production code, and reports exact counts.
+  That limit is a rule in its prompt, not its tool list, so check
+  `git status` after it runs.
 - `/new-use-case <Name> "<purpose>"`: the standard way to add a use case
   (plan first, then use case, repository contract, data impl, fake, tests).
 - `/run-unit-tests`: the standard way to answer "do the tests pass?".
