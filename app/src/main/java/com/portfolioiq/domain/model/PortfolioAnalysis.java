@@ -13,6 +13,7 @@ public class PortfolioAnalysis {
     private final String analysisDate;
     private final double riskPercent;
     private final String riskLevel;
+    private final RiskBreakdown riskBreakdown;
     private final double diversificationScore;
     private final String largestPosition;
     private final double largestPositionPercent;
@@ -22,7 +23,9 @@ public class PortfolioAnalysis {
     private final String diversificationComment;
     private final List<StockAnalysis> stocks;
 
+    /** riskBreakdown may be null (an older AI server that does not send the three parts). */
     public PortfolioAnalysis(String analysisDate, double riskPercent, String riskLevel,
+                             RiskBreakdown riskBreakdown,
                              double diversificationScore, String largestPosition,
                              double largestPositionPercent, String summary, List<String> strengths,
                              List<String> weaknesses, String diversificationComment,
@@ -30,6 +33,7 @@ public class PortfolioAnalysis {
         this.analysisDate = analysisDate;
         this.riskPercent = riskPercent;
         this.riskLevel = riskLevel;
+        this.riskBreakdown = riskBreakdown;
         this.diversificationScore = diversificationScore;
         this.largestPosition = largestPosition;
         this.largestPositionPercent = largestPositionPercent;
@@ -43,6 +47,7 @@ public class PortfolioAnalysis {
     public String getAnalysisDate() { return analysisDate; }
     public double getRiskPercent() { return riskPercent; }
     public String getRiskLevel() { return riskLevel; }
+    public RiskBreakdown getRiskBreakdown() { return riskBreakdown; }
     public double getDiversificationScore() { return diversificationScore; }
     public String getLargestPosition() { return largestPosition; }
     public double getLargestPositionPercent() { return largestPositionPercent; }

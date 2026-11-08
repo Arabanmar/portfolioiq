@@ -34,7 +34,12 @@ def test_full_analysis_then_chat():
     assert result["metrics"]["totalValue"] == 2600  # 2000 + 600 (no current price -> purchase price)
     assert {s["ticker"] for s in result["stocks"]} == {"AAPL", "MSFT"}
     assert all(s["rating"] in ("Buy", "Overweight", "Hold", "Underweight", "Sell") for s in result["stocks"])
-    assert 0 <= result["risk"]["riskPercent"] <= 100
+    risk = result["risk"]
+    assert 0 < risk["riskPercent"] <= 100
+    # fake mode reports a fixed 25% volatility -> volatility part 50
+    assert risk["volatilityAvailable"] is True
+    assert risk["annualVolatilityPercent"] == 25
+    assert risk["volatilityPart"] == 50
     assert result["summary"]["summary"]
     assert job["progress"] == {"done": 2, "total": 2, "current": None}
 
@@ -51,6 +56,38 @@ def test_same_ticker_twice_is_merged():
     result = wait_for(res.json()["jobId"])["result"]
     assert len(result["stocks"]) == 1
     assert result["metrics"]["totalCost"] == 3000
+
+
+def test_prices_that_cannot_be_downloaded_still_give_a_risk_score(monkeypatch):
+    monkeypatch.setattr("piq_server.jobs.volatility.get_annual_volatility", lambda weights: None)
+    res = client.post("/analysis", json={"holdings": [
+        {"ticker": "AAPL", "quantity": 1, "purchasePrice": 100}]})
+    job = wait_for(res.json()["jobId"])
+    assert job["status"] == "done", job
+    risk = job["result"]["risk"]
+    assert risk["volatilityAvailable"] is False
+    assert risk["annualVolatilityPercent"] is None
+    assert risk["volatilityPart"] == 50
+    assert risk["riskPercent"] > 0
+
+
+def test_volatility_is_asked_for_with_the_portfolio_weights(monkeypatch):
+    seen = {}
+
+    def record(weights):
+        seen.update(weights)
+        return 25.0
+
+    monkeypatch.setattr("piq_server.jobs.volatility.get_annual_volatility", record)
+    res = client.post("/analysis", json={"holdings": [
+        {"ticker": "aapl", "quantity": 10, "purchasePrice": 150, "currentPrice": 200},
+        {"ticker": "MSFT", "quantity": 2, "purchasePrice": 300},
+    ]})
+    assert wait_for(res.json()["jobId"])["status"] == "done"
+    # 2000 and 600 of 2600, as percentages
+    assert set(seen) == {"AAPL", "MSFT"}
+    assert abs(seen["AAPL"] - 76.92) < 0.01
+    assert abs(seen["MSFT"] - 23.08) < 0.01
 
 
 def test_bad_input_is_rejected():

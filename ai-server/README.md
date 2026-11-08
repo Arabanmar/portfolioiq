@@ -11,7 +11,9 @@ gives the Android app a small HTTP API.
    quantity, purchase price, live price) to `POST /analysis`.
 2. The server calculates the portfolio numbers in plain Python
    (`piq_server/metrics.py`): allocation, largest position, diversification
-   score, and a risk percentage. No AI is involved in any number.
+   score, and a risk percentage. The price-swing part of the risk comes from
+   a year of daily prices (`piq_server/volatility.py`, downloaded with
+   yfinance). No AI is involved in any number.
 3. For each stock, TradingAgents runs its team of agents (market, news and
    fundamentals analysts, bull/bear researchers, trader, risk team,
    portfolio manager) and returns a rating: Buy, Overweight, Hold,
@@ -21,9 +23,17 @@ gives the Android app a small HTTP API.
 
 The app checks `GET /analysis/{jobId}` every few seconds to show progress.
 
-**Risk percentage** = half concentration (sum of squared weights x 100),
-half the agents' ratings (Buy 0, Overweight 25, Hold 50, Underweight 75,
-Sell 100, weighted by allocation). Under 35 is Low, under 65 Medium, else High.
+**Risk percentage** = 0.4 x price swings + 0.3 x concentration + 0.3 x the
+agents' ratings, never below 5. Under 35 is Low, under 65 Medium, else High.
+- *Price swings* = the portfolio's annual volatility % x 2, at most 100 (25%
+  gives 50). It uses the covariance of the stocks' daily returns over the last
+  year, so spreading over different stocks lowers it. If the prices can't be
+  downloaded, 50 is used and the app is told (`volatilityAvailable: false`).
+- *Concentration* = sum of squared weights x 100 (everything in one stock = 100).
+- *Agents' ratings* = Buy 15, Overweight 30, Hold 50, Underweight 70, Sell 85
+  (unreadable rating 50), weighted by allocation. No rating is 0, because no
+  stock has zero risk.
+
 **Diversification score** = 100 x (1 - sum of squared weights): 0 means
 everything in one stock.
 

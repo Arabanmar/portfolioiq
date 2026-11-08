@@ -100,6 +100,15 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/riskPartsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/piq_text_secondary"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/numbersText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

@@ -24,6 +24,8 @@ PORTFOLIO NUMBERS (JSON):
 
 RISK (JSON, riskPercent is 0-100):
 {risk}
+If volatilityAvailable is false, volatilityPart is a neutral placeholder, not a
+measured value: do not describe the price swings.
 
 PER-STOCK AGENT DECISIONS:
 {decisions}
@@ -51,6 +53,8 @@ PORTFOLIO NUMBERS (JSON):
 
 RISK (JSON):
 {risk}
+If volatilityAvailable is false, volatilityPart is a neutral placeholder, not a
+measured value: do not describe the price swings.
 
 PER-STOCK AGENT DECISIONS:
 {decisions}
