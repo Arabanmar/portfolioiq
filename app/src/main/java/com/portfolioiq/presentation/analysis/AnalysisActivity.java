@@ -22,6 +22,7 @@ import com.portfolioiq.data.repository.HttpAiAnalysisRepositoryImpl;
 import com.portfolioiq.domain.model.AnalysisProgress;
 import com.portfolioiq.domain.model.PortfolioAnalysis;
 import com.portfolioiq.domain.model.PortfolioSummary;
+import com.portfolioiq.domain.model.RiskBreakdown;
 import com.portfolioiq.domain.model.StockAnalysis;
 import com.portfolioiq.domain.repository.AiAnalysisRepository;
 import com.portfolioiq.domain.repository.ResultCallback;
@@ -223,6 +224,12 @@ public class AnalysisActivity extends AppCompatActivity {
 
         ((TextView) findViewById(R.id.riskText)).setText(String.format(Locale.US,
                 "Risk: %.0f%% (%s)", a.getRiskPercent(), a.getRiskLevel()));
+        TextView riskParts = findViewById(R.id.riskPartsText);
+        RiskBreakdown parts = a.getRiskBreakdown();
+        riskParts.setVisibility(parts == null ? View.GONE : View.VISIBLE);
+        if (parts != null) {
+            riskParts.setText(riskPartsText(parts));
+        }
         ((TextView) findViewById(R.id.numbersText)).setText(String.format(Locale.US,
                 "Diversification score: %.0f / 100\nLargest position: %s (%.1f%% of portfolio)\nAnalysis date: %s",
                 a.getDiversificationScore(), a.getLargestPosition(), a.getLargestPositionPercent(),
@@ -238,6 +245,17 @@ public class AnalysisActivity extends AppCompatActivity {
             stocks.addView(text(s.getTicker() + ": " + s.getRating(), 16, true, 16));
             stocks.addView(text(preview(s.getDecision()), 14, false, 4));
         }
+    }
+
+    /** For example: "Price swings 50, Concentration 100, Agent ratings 70". */
+    private static String riskPartsText(RiskBreakdown parts) {
+        String text = String.format(Locale.US,
+                "Price swings %.0f, Concentration %.0f, Agent ratings %.0f",
+                parts.getVolatilityPart(), parts.getConcentrationPart(), parts.getRatingsPart());
+        if (!parts.isVolatilityAvailable()) {
+            text += "\nPrice swings is an estimate: the price history could not be downloaded.";
+        }
+        return text;
     }
 
     private TextView text(String value, int sizeSp, boolean bold, int marginTopDp) {

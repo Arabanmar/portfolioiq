@@ -14,7 +14,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 
-from . import agents, summarizer
+from . import agents, summarizer, volatility
 from .metrics import Holding, portfolio_metrics, risk_score
 
 _executor = ThreadPoolExecutor(max_workers=1)
@@ -67,7 +67,8 @@ def _run(job_id: str, holdings: list[Holding]) -> None:
         _update(job_id, progress={"current": None})
 
         ratings = {s["ticker"]: s["rating"] for s in stocks}
-        risk = risk_score(metrics, ratings)
+        weights = {p["ticker"]: p["allocationPercent"] for p in metrics["positions"]}
+        risk = risk_score(metrics, ratings, volatility.get_annual_volatility(weights))
         summary = summarizer.summarize(metrics, risk, stocks)
 
         result = {

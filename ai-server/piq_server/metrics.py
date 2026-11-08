@@ -11,14 +11,25 @@ from dataclasses import dataclass
 
 # How risky each TradingAgents rating is, on a 0-100 scale. "REVIEW" means
 # the agents' final decision could not be read as one of the five ratings.
+# No rating is 0: no stock has zero risk, even one the agents like.
 RATING_RISK = {
-    "Buy": 0.0,
-    "Overweight": 25.0,
+    "Buy": 15.0,
+    "Overweight": 30.0,
     "Hold": 50.0,
-    "Underweight": 75.0,
-    "Sell": 100.0,
+    "Underweight": 70.0,
+    "Sell": 85.0,
     "REVIEW": 50.0,
 }
+
+# How much of the final risk score each part carries (they add up to 1).
+VOLATILITY_WEIGHT = 0.4
+CONCENTRATION_WEIGHT = 0.3
+RATINGS_WEIGHT = 0.3
+
+# The risk score never goes below this, and the volatility part is this when
+# the price history could not be downloaded.
+MIN_RISK = 5.0
+VOLATILITY_PART_FALLBACK = 50.0
 
 
 @dataclass(frozen=True)
@@ -83,22 +94,38 @@ def portfolio_metrics(holdings: list[Holding]) -> dict:
     }
 
 
-def risk_score(metrics: dict, ratings: dict[str, str]) -> dict:
-    """A 0-100 risk percentage: half from concentration, half from the agents' ratings.
+def risk_score(metrics: dict, ratings: dict[str, str],
+               annual_volatility: float | None = None) -> dict:
+    """A 0-100 risk percentage from three parts, never below MIN_RISK.
 
+    volatility part    = annual volatility % x 2, capped at 100 (25% -> 50);
+                         VOLATILITY_PART_FALLBACK when annual_volatility is
+                         None (the price history could not be downloaded)
     concentration part = concentrationIndex x 100 (one stock = 100)
     ratings part       = allocation-weighted average of RATING_RISK
+
+    risk = 0.4 x volatility part + 0.3 x concentration part + 0.3 x ratings part
     """
+    volatility_available = annual_volatility is not None
+    volatility_part = (max(0.0, min(100.0, annual_volatility * 2)) if volatility_available
+                       else VOLATILITY_PART_FALLBACK)
     concentration_part = metrics["concentrationIndex"] * 100
     ratings_part = sum(
         p["allocationPercent"] / 100 * RATING_RISK.get(ratings.get(p["ticker"], "REVIEW"), 50.0)
         for p in metrics["positions"]
     )
-    score = 0.5 * concentration_part + 0.5 * ratings_part
+    score = max(MIN_RISK,
+                VOLATILITY_WEIGHT * volatility_part
+                + CONCENTRATION_WEIGHT * concentration_part
+                + RATINGS_WEIGHT * ratings_part)
     level = "Low" if score < 35 else "Medium" if score < 65 else "High"
     return {
         "riskPercent": round2(score),
         "riskLevel": level,
+        "volatilityPart": round2(volatility_part),
         "concentrationPart": round2(concentration_part),
         "ratingsPart": round2(ratings_part),
+        # None (JSON null) when unavailable, so it is never mistaken for "no volatility".
+        "annualVolatilityPercent": round2(annual_volatility) if volatility_available else None,
+        "volatilityAvailable": volatility_available,
     }

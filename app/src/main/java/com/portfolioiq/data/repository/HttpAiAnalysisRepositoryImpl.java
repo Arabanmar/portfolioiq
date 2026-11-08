@@ -8,6 +8,7 @@ import com.portfolioiq.BuildConfig;
 import com.portfolioiq.domain.model.AnalysisProgress;
 import com.portfolioiq.domain.model.HoldingPosition;
 import com.portfolioiq.domain.model.PortfolioAnalysis;
+import com.portfolioiq.domain.model.RiskBreakdown;
 import com.portfolioiq.domain.model.StockAnalysis;
 import com.portfolioiq.domain.repository.AiAnalysisRepository;
 import com.portfolioiq.domain.repository.ResultCallback;
@@ -200,7 +201,8 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
         return new AnalysisProgress(AnalysisProgress.Status.RUNNING, done, total, current, null, null);
     }
 
-    private static PortfolioAnalysis parseAnalysis(JSONObject result) throws Exception {
+    /** Package-private so HttpAiAnalysisParsingTest can call it. */
+    static PortfolioAnalysis parseAnalysis(JSONObject result) throws Exception {
         JSONObject metrics = result.getJSONObject("metrics");
         JSONObject risk = result.getJSONObject("risk");
         JSONObject summary = result.getJSONObject("summary");
@@ -216,6 +218,7 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
                 result.optString("analysisDate", ""),
                 risk.getDouble("riskPercent"),
                 risk.getString("riskLevel"),
+                parseRiskBreakdown(risk),
                 metrics.getDouble("diversificationScore"),
                 metrics.getString("largestPosition"),
                 metrics.getDouble("largestPositionPercent"),
@@ -224,6 +227,22 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
                 stringList(summary.optJSONArray("weaknesses")),
                 summary.optString("diversificationComment", ""),
                 stocks);
+    }
+
+    /** The three risk parts, or null when the server is an older one that does not send them. */
+    private static RiskBreakdown parseRiskBreakdown(JSONObject risk) {
+        if (risk.isNull("volatilityPart")) {
+            return null;
+        }
+        Double annualVolatility = risk.isNull("annualVolatilityPercent")
+                ? null
+                : risk.optDouble("annualVolatilityPercent");
+        return new RiskBreakdown(
+                risk.optDouble("volatilityPart"),
+                risk.optDouble("concentrationPart"),
+                risk.optDouble("ratingsPart"),
+                annualVolatility,
+                risk.optBoolean("volatilityAvailable", false));
     }
 
     private static List<String> stringList(JSONArray array) {

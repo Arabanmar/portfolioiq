@@ -69,6 +69,9 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.material)
     testImplementation(libs.junit)
+    // Real org.json for plain-JVM unit tests: Android's own copy is a stub there,
+    // so JSON parsing (HttpAiAnalysisParsingTest) can't run without it.
+    testImplementation("org.json:json:20240303")
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
 
