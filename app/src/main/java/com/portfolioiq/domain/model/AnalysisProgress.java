@@ -12,15 +12,17 @@ public class AnalysisProgress {
     private final int stocksDone;
     private final int stocksTotal;
     private final String currentTicker;   // null when no stock is being analysed right now
+    private final boolean currentFromCache; // the current stock is a result saved earlier today
     private final PortfolioAnalysis analysis; // only when DONE
     private final String error;            // only when FAILED, already safe to show
 
     public AnalysisProgress(Status status, int stocksDone, int stocksTotal, String currentTicker,
-                            PortfolioAnalysis analysis, String error) {
+                            boolean currentFromCache, PortfolioAnalysis analysis, String error) {
         this.status = status;
         this.stocksDone = stocksDone;
         this.stocksTotal = stocksTotal;
         this.currentTicker = currentTicker;
+        this.currentFromCache = currentFromCache;
         this.analysis = analysis;
         this.error = error;
     }
@@ -29,6 +31,7 @@ public class AnalysisProgress {
     public int getStocksDone() { return stocksDone; }
     public int getStocksTotal() { return stocksTotal; }
     public String getCurrentTicker() { return currentTicker; }
+    public boolean isCurrentFromCache() { return currentFromCache; }
     public PortfolioAnalysis getAnalysis() { return analysis; }
     public String getError() { return error; }
 }

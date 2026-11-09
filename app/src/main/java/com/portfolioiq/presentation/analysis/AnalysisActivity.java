@@ -200,6 +200,10 @@ public class AnalysisActivity extends AppCompatActivity {
                     ? "Writing your portfolio summary..."
                     : "Waiting to start...";
         }
+        if (p.isCurrentFromCache()) {
+            return String.format(Locale.US, "Using today's saved result for %s (stock %d of %d)...",
+                    p.getCurrentTicker(), p.getStocksDone() + 1, p.getStocksTotal());
+        }
         return String.format(Locale.US, "The AI agents are analysing %s (stock %d of %d)...",
                 p.getCurrentTicker(), p.getStocksDone() + 1, p.getStocksTotal());
     }
@@ -254,10 +258,12 @@ public class AnalysisActivity extends AppCompatActivity {
             if (s.getDebate() != null) {
                 // The case for and against comes first, then the verdict.
                 stocks.addView(text(s.getTicker(), 16, true, 16));
+                addSavedNote(stocks, s);
                 addDebate(stocks, s.getDebate());
                 stocks.addView(text("Final rating: " + s.getRating(), 16, true, 12));
             } else {
                 stocks.addView(text(s.getTicker() + ": " + s.getRating(), 16, true, 16));
+                addSavedNote(stocks, s);
             }
             if (s.getConfidence() != null) {
                 stocks.addView(text(confidenceText(s.getConfidence()), 14, false, 4));
@@ -278,6 +284,13 @@ public class AnalysisActivity extends AppCompatActivity {
             text += "\nPrice swings is an estimate: the price history could not be downloaded.";
         }
         return text;
+    }
+
+    /** A small line under a stock's heading when its result was saved earlier today. */
+    private void addSavedNote(LinearLayout container, StockAnalysis stock) {
+        if (stock.isFromCache()) {
+            container.addView(text("Saved result from today", 13, false, 2));
+        }
     }
 
     /** "For" and "Against": what each side argued, shown before the final rating. */
