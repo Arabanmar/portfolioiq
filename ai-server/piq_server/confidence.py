@@ -15,8 +15,9 @@ import math
 import re
 
 from .metrics import round2
+from .text import as_text as _as_text
 
-RATINGS = ("Buy", "Overweight", "Hold", "Underweight", "Sell")
+RATINGS =("Buy", "Overweight", "Hold", "Underweight", "Sell")
 _CANONICAL = {rating.lower(): rating for rating in RATINGS}
 DIRECTION = {
     "Buy": "up",
@@ -52,18 +53,6 @@ _RECOMMENDATION = re.compile(
 _ACTION = re.compile(
     _LINE_START + r"\*{0,2}Action\*{0,2}[ \t]*:[ \t]*\*{0,2}[ \t]*(Buy|Hold|Sell)\b",
     re.IGNORECASE | re.MULTILINE)
-
-
-def _as_text(value) -> str:
-    """Plain text from a model reply: a string, or (for some providers) a list of content parts."""
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        return value
-    if isinstance(value, (list, tuple)):
-        return "\n".join(_as_text(part.get("text") if isinstance(part, dict) else part)
-                         for part in value)
-    return str(value)
 
 
 def normalise_rating(rating) -> str | None:

@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import threading
 
-from . import confidence, settings
+from . import confidence, reading, settings
 
 _graph = None
 _graph_lock = threading.Lock()
@@ -50,7 +50,7 @@ def _get_graph():
 
 def analyze_stock(ticker: str, trade_date: str, positions: list[dict]) -> dict:
     """Returns {"ticker", "rating", "decision", "reports", "confidencePercent",
-    "confidenceLevel", "votes"} for one stock.
+    "confidenceLevel", "votes", "newsSummary", "sources"} for one stock.
 
     positions: [{"ticker", "quantity", "average_price"}] for the whole portfolio.
     The confidence fields say how much the Research Manager, the Trader and the
@@ -62,7 +62,8 @@ def analyze_stock(ticker: str, trade_date: str, positions: list[dict]) -> dict:
     from tradingagents.portfolio import PortfolioContext
 
     portfolio = PortfolioContext.model_validate({"currency": "USD", "positions": positions})
-    state, rating = _get_graph().propagate(ticker, trade_date, portfolio=portfolio)
+    graph = _get_graph()
+    state, rating = graph.propagate(ticker, trade_date, portfolio=portfolio)
     reports = {
         "market": state.get("market_report", ""),
         "news": state.get("news_report", ""),
@@ -80,6 +81,8 @@ def analyze_stock(ticker: str, trade_date: str, positions: list[dict]) -> dict:
             reports,
             settings.ANALYSTS,
         ),
+        **reading.stock_reading(reports, settings.ANALYSTS,
+                                (getattr(graph, "config", None) or {}).get("data_vendors")),
     }
 
 
@@ -92,6 +95,20 @@ _TRADER_ACTION = {"Buy": "Buy", "Overweight": "Buy", "Hold": "Hold",
                   "Underweight": "Sell", "Sell": "Sell"}
 
 
+def _fake_reports(ticker: str) -> dict:
+    """Short made-up analyst reports. The news one is markdown, like the real one."""
+    return {
+        "market": f"(Fake mode) market report for {ticker}.",
+        "news": (f"## News for {ticker}\n\n"
+                 f"- **(Fake mode)** Example headline: {ticker} shares moved after the latest "
+                 "quarterly update.\n"
+                 "- Analysts mention steady demand and rising costs.\n"
+                 "- Nothing in the news points to an unusual event this week.\n\n"
+                 "| Topic | Tone |\n|---|---|\n| Earnings | Neutral |\n| Demand | Positive |"),
+        "fundamentals": f"(Fake mode) fundamentals report for {ticker}.",
+    }
+
+
 def _fake_analysis(ticker: str) -> dict:
     digest = int(hashlib.sha256(ticker.encode()).hexdigest(), 16)
     rating = FAKE_RATINGS[digest % len(FAKE_RATINGS)]
@@ -100,8 +117,7 @@ def _fake_analysis(ticker: str) -> dict:
     disagreement = digest // len(FAKE_RATINGS) % 3
     research = _OPPOSITE[rating] if disagreement == 2 else rating
     trader = _TRADER_ACTION[_OPPOSITE[rating] if disagreement >= 1 else rating]
-    reports = {name: f"(Fake mode) {name} report for {ticker}."
-               for name in ("market", "news", "fundamentals")}
+    reports = _fake_reports(ticker)
     return {
         "ticker": ticker,
         "rating": rating,
@@ -115,4 +131,5 @@ def _fake_analysis(ticker: str) -> dict:
             reports,
             settings.ANALYSTS,
         ),
+        **reading.stock_reading(reports, settings.ANALYSTS),
     }
