@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from piq_server import agents, settings
@@ -240,3 +242,227 @@ def test_fake_mode_fills_both_sides_of_the_debate():
     assert result["bearCase"].startswith("(Fake mode) The case against AAPL.")
     assert "Customers keep coming back" in result["bullCase"]
     assert "Competition is getting stronger" in result["bearCase"]
+
+
+# ---- saved results (Issue E) ----
+
+DAY = "2026-11-09"
+
+
+def analyze(trade_date=DAY, positions=None):
+    return agents.analyze_stock("AAPL", trade_date, positions or POSITIONS)
+
+
+def without_flag(result):
+    return {key: value for key, value in result.items() if key != "fromCache"}
+
+
+class FailingGraph:
+    def propagate(self, ticker, trade_date, portfolio=None):
+        raise RuntimeError("the AI service's free limit was reached")
+
+
+def must_not_run():
+    raise AssertionError("the agents must not run again")
+
+
+def test_a_second_analysis_the_same_day_does_not_run_the_agents_again(monkeypatch):
+    graph = real_mode(monkeypatch, full_state())
+    first = analyze()
+    second = analyze()
+
+    assert len(graph.calls) == 1
+    assert first["fromCache"] is False
+    assert second["fromCache"] is True
+    assert without_flag(second) == without_flag(first)
+
+
+def test_the_saved_result_is_used_without_even_building_the_agents(monkeypatch):
+    real_mode(monkeypatch, full_state())
+    first = analyze()
+    monkeypatch.setattr(agents, "_get_graph", must_not_run)
+
+    assert without_flag(analyze()) == without_flag(first)
+
+
+def test_a_new_day_runs_the_agents_again(monkeypatch):
+    graph = real_mode(monkeypatch, full_state())
+    analyze("2026-11-09")
+    next_day = analyze("2026-11-10")
+    back_to_the_first_day = analyze("2026-11-09")
+
+    assert next_day["fromCache"] is False
+    assert len(graph.calls) == 2
+    assert back_to_the_first_day["fromCache"] is True  # each day keeps its own file
+    assert len(graph.calls) == 2
+
+
+def test_a_failed_run_is_not_saved(monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "FAKE_AI", False)
+    monkeypatch.setattr(settings, "ANALYSTS", ALL_ANALYSTS)
+    monkeypatch.setattr(agents, "_get_graph", lambda: FailingGraph())
+    with pytest.raises(RuntimeError):
+        analyze()
+    assert not (tmp_path / "cache").exists()
+    assert agents.has_saved_result("AAPL", DAY, POSITIONS) is False
+
+    graph = real_mode(monkeypatch, full_state())  # the retry
+    retry = analyze()
+
+    assert retry["fromCache"] is False
+    assert len(graph.calls) == 1
+
+
+def test_a_result_without_a_decision_is_not_saved(monkeypatch):
+    graph = real_mode(monkeypatch, full_state(final_trade_decision=""))
+    first = analyze()
+    second = analyze()
+
+    assert first["fromCache"] is False and second["fromCache"] is False
+    assert len(graph.calls) == 2
+
+
+def test_a_result_without_a_readable_rating_is_not_saved(monkeypatch):
+    graph = real_mode(monkeypatch, full_state(), rating="REVIEW")
+    analyze()
+    analyze()
+
+    assert len(graph.calls) == 2
+
+
+def test_a_changed_portfolio_runs_the_agents_again(monkeypatch):
+    graph = real_mode(monkeypatch, full_state())
+    analyze()
+    more_shares = [{"ticker": "AAPL", "quantity": 5, "average_price": 100}]
+    another_stock = POSITIONS + [{"ticker": "MSFT", "quantity": 1, "average_price": 300}]
+
+    assert analyze(positions=more_shares)["fromCache"] is False
+    assert analyze(positions=another_stock)["fromCache"] is False
+    assert len(graph.calls) == 3
+    assert analyze(positions=another_stock)["fromCache"] is True  # the newest run is the one kept
+    assert len(graph.calls) == 3
+
+
+def test_changed_settings_run_the_agents_again(monkeypatch):
+    graph = real_mode(monkeypatch, full_state())
+    analyze()
+
+    monkeypatch.setattr(settings, "ANALYSTS", ["market", "news"])
+    assert analyze()["fromCache"] is False
+    monkeypatch.setattr(settings, "QUICK_MODEL", "another-quick-model")
+    assert analyze()["fromCache"] is False
+    assert len(graph.calls) == 3
+
+
+def test_a_fake_result_is_never_served_to_a_real_run(monkeypatch):
+    assert settings.FAKE_AI  # tests/conftest.py turns fake mode on
+    fake = analyze()
+    assert fake["decision"].startswith("Rating:")
+
+    graph = real_mode(monkeypatch, full_state())
+    real = analyze()
+
+    assert real["fromCache"] is False
+    assert len(graph.calls) == 1
+    assert real["decision"].startswith("**Rating**: Buy")
+
+
+def test_fake_mode_reuses_a_saved_result_too():
+    first = analyze()
+    second = analyze()
+
+    assert first["fromCache"] is False
+    assert second["fromCache"] is True
+    assert without_flag(second) == without_flag(first)
+
+
+def test_has_saved_result_follows_the_same_rules(monkeypatch):
+    real_mode(monkeypatch, full_state())
+    assert agents.has_saved_result("AAPL", DAY, POSITIONS) is False
+    analyze()
+
+    assert agents.has_saved_result("AAPL", DAY, POSITIONS) is True
+    assert agents.has_saved_result("AAPL", "2026-11-10", POSITIONS) is False
+    assert agents.has_saved_result("AAPL", DAY, [{"ticker": "AAPL", "quantity": 99, "average_price": 1}]) is False
+    assert agents.has_saved_result("MSFT", DAY, POSITIONS) is False
+
+
+def test_an_analysis_still_works_when_the_result_cannot_be_saved(monkeypatch, tmp_path):
+    graph = real_mode(monkeypatch, full_state())
+    blocker = tmp_path / "blocker"
+    blocker.write_text("a file, not a folder", encoding="utf-8")
+    monkeypatch.setattr(settings, "DATA_DIR", blocker)
+
+    first = analyze()
+    second = analyze()
+
+    assert first["fromCache"] is False and second["fromCache"] is False
+    assert first["rating"] == "Buy"
+    assert len(graph.calls) == 2
+
+
+def test_a_saved_result_from_older_code_is_not_served(monkeypatch, tmp_path):
+    graph = real_mode(monkeypatch, full_state())
+    analyze()
+    path = tmp_path / "cache" / DAY / "AAPL.json"
+    entry = json.loads(path.read_text(encoding="utf-8"))
+    del entry["result"]["bullCase"]  # as if saved before the debate was added
+    path.write_text(json.dumps(entry), encoding="utf-8")
+
+    assert analyze()["fromCache"] is False
+    assert len(graph.calls) == 2
+
+
+def test_the_saved_result_keeps_every_field_the_screen_needs(monkeypatch):
+    real_mode(monkeypatch, full_state(news_report=LONG_NEWS))
+    first = analyze()
+    second = analyze()
+
+    for key in ("rating", "decision", "confidencePercent", "confidenceLevel", "votes",
+                "newsSummary", "sources", "bullCase", "bearCase", "reports"):
+        assert second[key] == first[key]
+    assert second["fromCache"] is True
+
+
+def test_a_run_where_an_analyst_came_back_empty_is_not_saved(monkeypatch):
+    graph = real_mode(monkeypatch, full_state(fundamentals_report=""))
+    analyze()
+    analyze()
+
+    assert len(graph.calls) == 2  # the empty report is a defect, so a retry gets another go
+
+
+def test_an_empty_report_from_an_analyst_that_is_switched_off_does_not_stop_the_save(monkeypatch):
+    graph = real_mode(monkeypatch, full_state(fundamentals_report=""))
+    monkeypatch.setattr(settings, "ANALYSTS", ["market", "news"])
+    analyze()
+
+    assert analyze()["fromCache"] is True
+    assert len(graph.calls) == 1
+
+
+def test_a_failed_second_stock_leaves_the_first_one_saved(monkeypatch):
+    real_mode(monkeypatch, full_state())
+    analyze()
+    monkeypatch.setattr(agents, "_get_graph", lambda: FailingGraph())
+
+    with pytest.raises(RuntimeError):
+        agents.analyze_stock("MSFT", DAY, POSITIONS)
+
+    assert agents.has_saved_result("AAPL", DAY, POSITIONS) is True
+    assert agents.has_saved_result("MSFT", DAY, POSITIONS) is False
+
+
+def test_a_fake_run_never_replaces_a_saved_real_result(monkeypatch):
+    graph = real_mode(monkeypatch, full_state())
+    real = analyze()
+
+    monkeypatch.setattr(settings, "FAKE_AI", True)
+    fake = analyze()
+    assert fake["fromCache"] is False and fake["decision"].startswith("Rating:")
+
+    monkeypatch.setattr(settings, "FAKE_AI", False)
+    again = analyze()
+    assert again["fromCache"] is True
+    assert without_flag(again) == without_flag(real)
+    assert len(graph.calls) == 1

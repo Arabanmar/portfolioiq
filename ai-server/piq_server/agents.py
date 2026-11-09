@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import threading
 
-from . import confidence, debate, reading, settings
+from . import cache, confidence, debate, reading, settings
 
 _graph = None
 _graph_lock = threading.Lock()
@@ -50,16 +50,33 @@ def _get_graph():
 
 def analyze_stock(ticker: str, trade_date: str, positions: list[dict]) -> dict:
     """Returns {"ticker", "rating", "decision", "reports", "confidencePercent",
-    "confidenceLevel", "votes", "newsSummary", "sources", "bullCase", "bearCase"} for
-    one stock.
+    "confidenceLevel", "votes", "newsSummary", "sources", "bullCase", "bearCase",
+    "fromCache"} for one stock.
 
     positions: [{"ticker", "quantity", "average_price"}] for the whole portfolio.
     The confidence fields say how much the Research Manager, the Trader and the
     final rating agree (confidence.py).
-    """
-    if settings.FAKE_AI:
-        return _fake_analysis(ticker)
 
+    A result saved today for the same holdings and settings is reused instead of
+    running the agents again ("fromCache" is True). Otherwise the agents run (minutes
+    of Gemini calls) and a complete result is saved (cache.py).
+    """
+    key = cache.run_key(positions)
+    saved = cache.load(ticker, trade_date, key)
+    if saved is not None:
+        return {**saved, "fromCache": True}
+    result = _fake_analysis(ticker) if settings.FAKE_AI else _run_agents(ticker, trade_date, positions)
+    cache.save(ticker, trade_date, key, result)
+    return {**result, "fromCache": False}
+
+
+def has_saved_result(ticker: str, trade_date: str, positions: list[dict]) -> bool:
+    """Whether analyze_stock would reuse a saved result right now (jobs.py tells the app)."""
+    return cache.load(ticker, trade_date, cache.run_key(positions)) is not None
+
+
+def _run_agents(ticker: str, trade_date: str, positions: list[dict]) -> dict:
+    """Runs the TradingAgents team on one stock: minutes of Gemini calls."""
     from tradingagents.portfolio import PortfolioContext
 
     portfolio = PortfolioContext.model_validate({"currency": "USD", "positions": positions})

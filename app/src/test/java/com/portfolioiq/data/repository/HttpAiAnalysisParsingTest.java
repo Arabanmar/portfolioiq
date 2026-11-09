@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 import com.portfolioiq.domain.model.AgentConfidence;
 import com.portfolioiq.domain.model.AgentDebate;
 import com.portfolioiq.domain.model.AgentReading;
+import com.portfolioiq.domain.model.AnalysisProgress;
 import com.portfolioiq.domain.model.PortfolioAnalysis;
 import com.portfolioiq.domain.model.RiskBreakdown;
 
@@ -303,5 +304,90 @@ public class HttpAiAnalysisParsingTest {
         assertNotNull(analysis.getStocks().get(0).getReading());
         assertNotNull(analysis.getStocks().get(0).getDebate());
         assertEquals("Costs are rising.", analysis.getStocks().get(0).getDebate().getBearCase());
+    }
+
+    // ---- saved results (Issue E) ----
+
+    private static JSONObject runningJob(String progressJson) throws Exception {
+        return new JSONObject("{\"status\":\"running\",\"progress\":" + progressJson + "}");
+    }
+
+    @Test
+    public void progress_saysWhenTheCurrentStockIsASavedResult() throws Exception {
+        AnalysisProgress progress = HttpAiAnalysisRepositoryImpl.parseProgress(runningJob(
+                "{\"done\":1,\"total\":3,\"current\":\"MSFT\",\"currentFromCache\":true}"));
+
+        assertEquals(AnalysisProgress.Status.RUNNING, progress.getStatus());
+        assertEquals("MSFT", progress.getCurrentTicker());
+        assertEquals(1, progress.getStocksDone());
+        assertEquals(3, progress.getStocksTotal());
+        assertTrue(progress.isCurrentFromCache());
+    }
+
+    @Test
+    public void progress_whenTheAgentsRun_isNotASavedResult() throws Exception {
+        AnalysisProgress progress = HttpAiAnalysisRepositoryImpl.parseProgress(runningJob(
+                "{\"done\":0,\"total\":2,\"current\":\"AAPL\",\"currentFromCache\":false}"));
+
+        assertEquals("AAPL", progress.getCurrentTicker());
+        assertFalse(progress.isCurrentFromCache());
+    }
+
+    @Test
+    public void progress_fromAnOlderServerWithoutTheFlag_isNotASavedResult() throws Exception {
+        AnalysisProgress progress = HttpAiAnalysisRepositoryImpl.parseProgress(runningJob(
+                "{\"done\":0,\"total\":2,\"current\":\"AAPL\"}"));
+
+        assertFalse(progress.isCurrentFromCache());
+        assertEquals("AAPL", progress.getCurrentTicker());
+    }
+
+    @Test
+    public void progress_withANullFlagAndNoCurrentStock_isNotASavedResult() throws Exception {
+        AnalysisProgress progress = HttpAiAnalysisRepositoryImpl.parseProgress(runningJob(
+                "{\"done\":2,\"total\":2,\"current\":null,\"currentFromCache\":null}"));
+
+        assertNull(progress.getCurrentTicker());
+        assertFalse(progress.isCurrentFromCache());
+    }
+
+    @Test
+    public void progress_whenDone_carriesTheAnalysisAndNoSavedFlag() throws Exception {
+        JSONObject job = new JSONObject("{\"status\":\"done\","
+                + "\"progress\":{\"done\":1,\"total\":1,\"current\":null,\"currentFromCache\":false},"
+                + "\"result\":" + result(PLAIN_RISK, "", ",\"fromCache\":true") + "}");
+
+        AnalysisProgress progress = HttpAiAnalysisRepositoryImpl.parseProgress(job);
+
+        assertEquals(AnalysisProgress.Status.DONE, progress.getStatus());
+        assertFalse(progress.isCurrentFromCache());
+        assertTrue(progress.getAnalysis().getStocks().get(0).isFromCache());
+    }
+
+    @Test
+    public void stockFromCache_isParsed() throws Exception {
+        PortfolioAnalysis saved = HttpAiAnalysisRepositoryImpl.parseAnalysis(
+                result(PLAIN_RISK, "", ",\"fromCache\":true"));
+        PortfolioAnalysis fresh = HttpAiAnalysisRepositoryImpl.parseAnalysis(
+                result(PLAIN_RISK, "", ",\"fromCache\":false"));
+
+        assertTrue(saved.getStocks().get(0).isFromCache());
+        assertFalse(fresh.getStocks().get(0).isFromCache());
+    }
+
+    @Test
+    public void stockFromAnOlderServerWithoutTheFlag_isNotFromCache() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK));
+
+        assertFalse(analysis.getStocks().get(0).isFromCache());
+        assertEquals("Buy", analysis.getStocks().get(0).getRating());
+    }
+
+    @Test
+    public void stockWithANullFromCache_isNotFromCache() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(
+                result(PLAIN_RISK, "", ",\"fromCache\":null"));
+
+        assertFalse(analysis.getStocks().get(0).isFromCache());
     }
 }

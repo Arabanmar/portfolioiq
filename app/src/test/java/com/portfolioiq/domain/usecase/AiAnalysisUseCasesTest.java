@@ -91,7 +91,7 @@ public class AiAnalysisUseCasesTest {
 
     @Test
     public void progress_isReturnedForTrimmedJobId() {
-        AnalysisProgress running = new AnalysisProgress(AnalysisProgress.Status.RUNNING, 1, 3, "MSFT", null, null);
+        AnalysisProgress running = new AnalysisProgress(AnalysisProgress.Status.RUNNING, 1, 3, "MSFT", false, null, null);
         fakeRepository.progressToReturn = running;
         Result<AnalysisProgress> r = new Result<>();
         new GetAnalysisProgressUseCase(fakeRepository).execute(" job-1 ", r);

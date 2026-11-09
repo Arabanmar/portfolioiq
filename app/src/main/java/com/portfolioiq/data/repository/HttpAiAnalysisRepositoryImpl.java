@@ -186,7 +186,8 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
         return GENERIC_ERROR;
     }
 
-    private static AnalysisProgress parseProgress(JSONObject job) throws Exception {
+    /** Package-private so HttpAiAnalysisParsingTest can call it. */
+    static AnalysisProgress parseProgress(JSONObject job) throws Exception {
         String status = job.getString("status");
         JSONObject progress = job.getJSONObject("progress");
         int done = progress.optInt("done", 0);
@@ -194,14 +195,15 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
         String current = progress.isNull("current") ? null : progress.getString("current");
 
         if ("done".equals(status)) {
-            return new AnalysisProgress(AnalysisProgress.Status.DONE, done, total, null,
+            return new AnalysisProgress(AnalysisProgress.Status.DONE, done, total, null, false,
                     parseAnalysis(job.getJSONObject("result")), null);
         }
         if ("failed".equals(status)) {
             String error = job.isNull("error") ? GENERIC_ERROR : job.getString("error");
-            return new AnalysisProgress(AnalysisProgress.Status.FAILED, done, total, null, null, error);
+            return new AnalysisProgress(AnalysisProgress.Status.FAILED, done, total, null, false, null, error);
         }
-        return new AnalysisProgress(AnalysisProgress.Status.RUNNING, done, total, current, null, null);
+        return new AnalysisProgress(AnalysisProgress.Status.RUNNING, done, total, current,
+                progress.optBoolean("currentFromCache", false), null, null);
     }
 
     /** Package-private so HttpAiAnalysisParsingTest can call it. */
@@ -216,7 +218,7 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
             JSONObject s = stockArray.getJSONObject(i);
             stocks.add(new StockAnalysis(s.getString("ticker"), s.getString("rating"),
                     s.optString("decision", ""), parseConfidence(s), parseReading(s),
-                    parseDebate(s)));
+                    parseDebate(s), s.optBoolean("fromCache", false)));
         }
 
         return new PortfolioAnalysis(

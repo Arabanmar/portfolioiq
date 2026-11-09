@@ -68,6 +68,27 @@ written after reading the bull's and rebuts it, so it reads conversationally.
 The app shows them as "For" and "Against" before the final rating. See
 `piq_server/debate.py`.
 
+**Saved results.** One stock takes minutes of Gemini calls, so a finished
+analysis is saved to `ai-server/data/cache/<date>/<TICKER>.json` (fake mode uses
+`<TICKER>.fake.json`, so a demo run never replaces a real result) and reused
+instead of running the agents again (`piq_server/cache.py`). A saved result is
+only reused when it was made today, for the **same holdings** (TradingAgents' Trader,
+Portfolio Manager and risk debators are told what you hold, so a changed book
+is a different run), with the same settings (fake or real mode, analysts,
+Gemini models), by the same code (a digest of the files that turn TradingAgents'
+output into the saved fields, so editing one never serves old fields), and with
+every field of the right type. Only a complete result is saved: a failed run
+saves nothing, and neither does one with no readable rating, no decision, or an
+empty report from an analyst that is switched on. Portfolio numbers, risk, the
+portfolio-level confidence and the summary are always computed fresh from your
+current holdings; a stock's own confidence, news and for/against come from the
+saved result. Each stock carries `fromCache`, the job's progress says when the
+stock being "analysed" is a saved result, and the server window logs how many
+seconds each stock took. A saved result can be hours old (the file records when
+it was saved); the app labels it "Saved result from today". To force a fresh
+analysis, delete that stock's file (or the day's folder). Old days' folders are
+never read again and are not cleaned up automatically.
+
 **Diversification score** = 100 x (1 - sum of squared weights): 0 means
 everything in one stock.
 

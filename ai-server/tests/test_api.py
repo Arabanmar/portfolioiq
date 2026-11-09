@@ -1,9 +1,11 @@
+import threading
 import time
 
 from fastapi.testclient import TestClient
 
 import app as server
-from piq_server import settings
+from piq_server import agents, jobs, settings
+from piq_server.metrics import Holding
 
 client = TestClient(server.app)
 
@@ -41,7 +43,7 @@ def test_full_analysis_then_chat():
     assert risk["annualVolatilityPercent"] == 25
     assert risk["volatilityPart"] == 50
     assert result["summary"]["summary"]
-    assert job["progress"] == {"done": 2, "total": 2, "current": None}
+    assert job["progress"] == {"done": 2, "total": 2, "current": None, "currentFromCache": False}
     for s in result["stocks"]:
         assert 10 <= s["confidencePercent"] <= 95
         assert s["confidenceLevel"] in ("High", "Medium", "Low")
@@ -115,6 +117,97 @@ def test_portfolio_confidence_is_weighted_by_position_value():
     assert by_ticker == {"TSLA": 90, "JNJ": 40}
     # (2000 x 90 + 600 x 40) / 2600 = 78.46, shown as the whole number 78
     assert result["confidence"] == {"confidencePercent": 78, "confidenceLevel": "High"}
+
+
+def stocks_without_the_flag(job):
+    return [{key: value for key, value in s.items() if key != "fromCache"}
+            for s in job["result"]["stocks"]]
+
+
+def test_a_second_analysis_of_the_same_holdings_uses_the_saved_results(capsys):
+    holdings = {"holdings": [
+        {"ticker": "AAPL", "quantity": 10, "purchasePrice": 150, "currentPrice": 200},
+        {"ticker": "MSFT", "quantity": 2, "purchasePrice": 300},
+    ]}
+    first = wait_for(client.post("/analysis", json=holdings).json()["jobId"])
+    second = wait_for(client.post("/analysis", json=holdings).json()["jobId"])
+
+    assert [s["fromCache"] for s in first["result"]["stocks"]] == [False, False]
+    assert [s["fromCache"] for s in second["result"]["stocks"]] == [True, True]
+    assert stocks_without_the_flag(second) == stocks_without_the_flag(first)
+    assert second["progress"] == {"done": 2, "total": 2, "current": None, "currentFromCache": False}
+    log = capsys.readouterr().out
+    assert "AAPL: " in log and "MSFT: " in log
+    assert "(agents)" in log and "(saved result)" in log
+
+
+def test_changed_quantities_run_the_agents_again_and_the_numbers_are_fresh():
+    def holdings(quantity):
+        return {"holdings": [{"ticker": "AAPL", "quantity": quantity, "purchasePrice": 150,
+                              "currentPrice": 200}]}
+
+    first = wait_for(client.post("/analysis", json=holdings(10)).json()["jobId"])
+    second = wait_for(client.post("/analysis", json=holdings(20)).json()["jobId"])
+
+    assert second["result"]["stocks"][0]["fromCache"] is False
+    assert first["result"]["metrics"]["totalValue"] == 2000
+    assert second["result"]["metrics"]["totalValue"] == 4000
+
+
+def test_numbers_are_computed_fresh_even_when_every_stock_is_a_saved_result():
+    base = {"ticker": "AAPL", "quantity": 10, "purchasePrice": 150, "currentPrice": 200}
+    first = wait_for(client.post("/analysis", json={"holdings": [base]}).json()["jobId"])
+    # a different price for the same holdings: the saved analysis is reused, the value is not
+    second = wait_for(client.post(
+        "/analysis", json={"holdings": [{**base, "currentPrice": 250}]}).json()["jobId"])
+
+    assert second["result"]["stocks"][0]["fromCache"] is True
+    assert first["result"]["metrics"]["totalValue"] == 2000
+    assert second["result"]["metrics"]["totalValue"] == 2500
+
+
+def test_progress_marks_a_stock_whose_saved_result_is_being_used(monkeypatch):
+    go = threading.Event()
+    seen = {}
+    monkeypatch.setattr(agents, "has_saved_result", lambda ticker, trade_date, positions: True)
+
+    def stand_in(ticker, trade_date, positions):
+        go.wait(5)
+        seen["progress"] = jobs.get(seen["job_id"])["progress"]
+        return {**agents._fake_analysis(ticker), "fromCache": True}
+
+    monkeypatch.setattr(agents, "analyze_stock", stand_in)
+    job_id = jobs.start([Holding("AAPL", 1, 100, 100)])
+    seen["job_id"] = job_id
+    go.set()
+    job = wait_for(job_id)
+
+    assert job["status"] == "done", job
+    assert seen["progress"]["current"] == "AAPL"
+    assert seen["progress"]["currentFromCache"] is True
+    assert job["progress"]["current"] is None
+    assert job["progress"]["currentFromCache"] is False
+
+
+def test_progress_does_not_say_saved_when_the_agents_really_run(monkeypatch):
+    go = threading.Event()
+    seen = {}
+    original = agents.analyze_stock
+
+    def watching(ticker, trade_date, positions):
+        go.wait(5)
+        seen["progress"] = jobs.get(seen["job_id"])["progress"]
+        return original(ticker, trade_date, positions)
+
+    monkeypatch.setattr(agents, "analyze_stock", watching)
+    job_id = jobs.start([Holding("AAPL", 1, 100, 100)])
+    seen["job_id"] = job_id
+    go.set()
+    job = wait_for(job_id)
+
+    assert job["status"] == "done", job
+    assert seen["progress"]["current"] == "AAPL"
+    assert seen["progress"]["currentFromCache"] is False
 
 
 def test_bad_input_is_rejected():

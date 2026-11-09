@@ -9,6 +9,7 @@ server forgets them.
 from __future__ import annotations
 
 import threading
+import time
 import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -28,7 +29,8 @@ def start(holdings: list[Holding]) -> str:
         _jobs[job_id] = {
             "jobId": job_id,
             "status": "queued",
-            "progress": {"done": 0, "total": len(holdings), "current": None},
+            "progress": {"done": 0, "total": len(holdings), "current": None,
+                         "currentFromCache": False},
             "result": None,
             "error": None,
         }
@@ -61,10 +63,16 @@ def _run(job_id: str, holdings: list[Holding]) -> None:
 
         stocks = []
         for i, h in enumerate(holdings):
-            _update(job_id, progress={"current": h.ticker})
-            stocks.append(agents.analyze_stock(h.ticker, trade_date, positions))
+            saved = agents.has_saved_result(h.ticker, trade_date, positions)
+            _update(job_id, progress={"current": h.ticker, "currentFromCache": saved})
+            started = time.monotonic()
+            stock = agents.analyze_stock(h.ticker, trade_date, positions)
+            seconds = time.monotonic() - started
+            print(f"{h.ticker}: {seconds:.1f} s ({'saved result' if stock['fromCache'] else 'agents'})",
+                  flush=True)
+            stocks.append(stock)
             _update(job_id, progress={"done": i + 1})
-        _update(job_id, progress={"current": None})
+        _update(job_id, progress={"current": None, "currentFromCache": False})
 
         ratings = {s["ticker"]: s["rating"] for s in stocks}
         weights = {p["ticker"]: p["allocationPercent"] for p in metrics["positions"]}
@@ -85,7 +93,8 @@ def _run(job_id: str, holdings: list[Holding]) -> None:
                         "newsSummary": s["newsSummary"],
                         "sources": s["sources"],
                         "bullCase": s["bullCase"],
-                        "bearCase": s["bearCase"]}
+                        "bearCase": s["bearCase"],
+                        "fromCache": s["fromCache"]}
                        for s in stocks],
         }
         _update(job_id, status="done", result=result)
