@@ -27,6 +27,12 @@ RISK (JSON, riskPercent is 0-100):
 If volatilityAvailable is false, volatilityPart is a neutral placeholder, not a
 measured value: do not describe the price swings.
 
+AGENT CONFIDENCE FOR THE WHOLE PORTFOLIO (JSON, percent is 10-95):
+{confidence}
+Confidence measures how much the AI agents agree with each other. It is not the
+chance of making money: never describe it as a probability of profit or a guarantee.
+If it is null, confidence is not available: do not mention it.
+
 PER-STOCK AGENT DECISIONS:
 {decisions}
 
@@ -56,6 +62,12 @@ RISK (JSON):
 If volatilityAvailable is false, volatilityPart is a neutral placeholder, not a
 measured value: do not describe the price swings.
 
+AGENT CONFIDENCE FOR THE WHOLE PORTFOLIO (JSON):
+{confidence}
+Confidence measures how much the AI agents agree with each other. It is not the
+chance of making money: never describe it as a probability of profit or a guarantee.
+If it is null, confidence is not available: do not mention it.
+
 PER-STOCK AGENT DECISIONS:
 {decisions}
 
@@ -69,7 +81,10 @@ def _decisions_text(stocks: list[dict]) -> str:
     parts = []
     for s in stocks:
         decision = (s.get("decision") or "").strip()[:DECISION_CHARS]
-        parts.append(f"--- {s['ticker']} (rating: {s['rating']}) ---\n{decision}")
+        agreement = ""
+        if "confidencePercent" in s:
+            agreement = f", agent confidence: {s['confidencePercent']:g}% {s['confidenceLevel']}"
+        parts.append(f"--- {s['ticker']} (rating: {s['rating']}{agreement}) ---\n{decision}")
     return "\n\n".join(parts)
 
 
@@ -96,12 +111,13 @@ def _parse_json(text: str) -> dict:
     }
 
 
-def summarize(metrics: dict, risk: dict, stocks: list[dict]) -> dict:
+def summarize(metrics: dict, risk: dict, stocks: list[dict], confidence: dict | None = None) -> dict:
     if settings.FAKE_AI:
         return _fake_summary(metrics, risk)
     prompt = SUMMARY_PROMPT.format(
         metrics=json.dumps(metrics, indent=1),
         risk=json.dumps(risk, indent=1),
+        confidence=json.dumps(confidence, indent=1),
         decisions=_decisions_text(stocks),
     )
     reply = _ask_gemini(prompt)
@@ -120,6 +136,7 @@ def answer(question: str, result: dict) -> str:
     prompt = CHAT_PROMPT.format(
         metrics=json.dumps(result["metrics"], indent=1),
         risk=json.dumps(result["risk"], indent=1),
+        confidence=json.dumps(result.get("confidence"), indent=1),
         decisions=_decisions_text(result["stocks"]),
         summary=result["summary"].get("summary", ""),
         question=question,

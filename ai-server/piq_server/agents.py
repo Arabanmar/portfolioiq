@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import threading
 
-from . import settings
+from . import confidence, settings
 
 _graph = None
 _graph_lock = threading.Lock()
@@ -49,9 +49,12 @@ def _get_graph():
 
 
 def analyze_stock(ticker: str, trade_date: str, positions: list[dict]) -> dict:
-    """Returns {"ticker", "rating", "decision", "reports"} for one stock.
+    """Returns {"ticker", "rating", "decision", "reports", "confidencePercent",
+    "confidenceLevel", "votes"} for one stock.
 
     positions: [{"ticker", "quantity", "average_price"}] for the whole portfolio.
+    The confidence fields say how much the Research Manager, the Trader and the
+    final rating agree (confidence.py).
     """
     if settings.FAKE_AI:
         return _fake_analysis(ticker)
@@ -60,24 +63,56 @@ def analyze_stock(ticker: str, trade_date: str, positions: list[dict]) -> dict:
 
     portfolio = PortfolioContext.model_validate({"currency": "USD", "positions": positions})
     state, rating = _get_graph().propagate(ticker, trade_date, portfolio=portfolio)
+    reports = {
+        "market": state.get("market_report", ""),
+        "news": state.get("news_report", ""),
+        "fundamentals": state.get("fundamentals_report", ""),
+    }
     return {
         "ticker": ticker,
         "rating": rating,
         "decision": state.get("final_trade_decision", ""),
-        "reports": {
-            "market": state.get("market_report", ""),
-            "news": state.get("news_report", ""),
-            "fundamentals": state.get("fundamentals_report", ""),
-        },
+        "reports": reports,
+        **confidence.stock_confidence(
+            rating,
+            state.get("investment_plan", ""),
+            state.get("trader_investment_plan", ""),
+            reports,
+            settings.ANALYSTS,
+        ),
     }
 
 
+# Fake mode makes the agents disagree by picking a rating on the other side of
+# the market, so the confidence differs from stock to stock.
+_OPPOSITE = {"Buy": "Sell", "Overweight": "Underweight", "Hold": "Buy",
+             "Underweight": "Overweight", "Sell": "Buy"}
+# The Trader only says Buy, Hold or Sell.
+_TRADER_ACTION = {"Buy": "Buy", "Overweight": "Buy", "Hold": "Hold",
+                  "Underweight": "Sell", "Sell": "Sell"}
+
+
 def _fake_analysis(ticker: str) -> dict:
-    rating = FAKE_RATINGS[int(hashlib.sha256(ticker.encode()).hexdigest(), 16) % len(FAKE_RATINGS)]
+    digest = int(hashlib.sha256(ticker.encode()).hexdigest(), 16)
+    rating = FAKE_RATINGS[digest % len(FAKE_RATINGS)]
+    # 0 = all three agents agree, 1 = the trader differs, 2 = both others differ
+    # (confidence High, Medium, Low), so the screens show all three levels.
+    disagreement = digest // len(FAKE_RATINGS) % 3
+    research = _OPPOSITE[rating] if disagreement == 2 else rating
+    trader = _TRADER_ACTION[_OPPOSITE[rating] if disagreement >= 1 else rating]
+    reports = {name: f"(Fake mode) {name} report for {ticker}."
+               for name in ("market", "news", "fundamentals")}
     return {
         "ticker": ticker,
         "rating": rating,
         "decision": f"Rating: {rating}\n(Fake mode) Example decision text for {ticker}. "
                     "Set PIQ_FAKE_AI=0 and add a Gemini key to get the real TradingAgents analysis.",
-        "reports": {"market": "", "news": "", "fundamentals": ""},
+        "reports": reports,
+        **confidence.stock_confidence(
+            rating,
+            f"**Recommendation**: {research}\n\n**Rationale**: (Fake mode) example.",
+            f"**Action**: {trader}\n\n**Reasoning**: (Fake mode) example.",
+            reports,
+            settings.ANALYSTS,
+        ),
     }
