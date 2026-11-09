@@ -6,6 +6,7 @@ import android.util.Log;
 
 import com.portfolioiq.BuildConfig;
 import com.portfolioiq.domain.model.AgentConfidence;
+import com.portfolioiq.domain.model.AgentReading;
 import com.portfolioiq.domain.model.AnalysisProgress;
 import com.portfolioiq.domain.model.HoldingPosition;
 import com.portfolioiq.domain.model.PortfolioAnalysis;
@@ -213,7 +214,7 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
         for (int i = 0; i < stockArray.length(); i++) {
             JSONObject s = stockArray.getJSONObject(i);
             stocks.add(new StockAnalysis(s.getString("ticker"), s.getString("rating"),
-                    s.optString("decision", ""), parseConfidence(s)));
+                    s.optString("decision", ""), parseConfidence(s), parseReading(s)));
         }
 
         return new PortfolioAnalysis(
@@ -242,6 +243,29 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
             return null;
         }
         return new AgentConfidence(json.optDouble("confidencePercent"), json.optString("confidenceLevel"));
+    }
+
+    /**
+     * What the agents read for a stock (newsSummary and sources), or null when
+     * the server sends neither (an older server) or both are empty. Blank and
+     * null entries in sources are dropped.
+     */
+    private static AgentReading parseReading(JSONObject stock) {
+        String news = stock.isNull("newsSummary") ? "" : stock.optString("newsSummary", "").trim();
+        List<String> sources = new ArrayList<>();
+        JSONArray array = stock.optJSONArray("sources");
+        if (array != null) {
+            for (int i = 0; i < array.length(); i++) {
+                String source = array.isNull(i) ? "" : array.optString(i, "").trim();
+                if (!source.isEmpty()) {
+                    sources.add(source);
+                }
+            }
+        }
+        if (news.isEmpty() && sources.isEmpty()) {
+            return null;
+        }
+        return new AgentReading(news, sources);
     }
 
     /** The three risk parts, or null when the server is an older one that does not send them. */

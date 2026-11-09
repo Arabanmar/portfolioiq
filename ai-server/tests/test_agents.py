@@ -9,9 +9,10 @@ ALL_ANALYSTS = ["market", "news", "fundamentals"]
 class StandInGraph:
     """Stands in for TradingAgentsGraph: hands back a ready-made state."""
 
-    def __init__(self, state, rating):
+    def __init__(self, state, rating, config=None):
         self.state = state
         self.rating = rating
+        self.config = config
         self.calls = []
 
     def propagate(self, ticker, trade_date, portfolio=None):
@@ -19,8 +20,8 @@ class StandInGraph:
         return self.state, self.rating
 
 
-def real_mode(monkeypatch, state, rating="Buy"):
-    graph = StandInGraph(state, rating)
+def real_mode(monkeypatch, state, rating="Buy", config=None):
+    graph = StandInGraph(state, rating, config)
     monkeypatch.setattr(settings, "FAKE_AI", False)
     monkeypatch.setattr(settings, "ANALYSTS", ALL_ANALYSTS)
     monkeypatch.setattr(agents, "_get_graph", lambda: graph)
@@ -107,3 +108,72 @@ def test_fake_reports_are_not_empty():
     reports = agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)["reports"]
     assert set(reports) == {"market", "news", "fundamentals"}
     assert all(text.strip() for text in reports.values())
+
+
+# ---- what the agents read (Issue C) ----
+
+DEFAULT_SOURCES = ["Yahoo Finance prices and indicators",
+                   "Yahoo Finance news, past 7 days",
+                   "SEC EDGAR financial statements"]
+LONG_NEWS = "## Headline\n\n" + "- **Shares** rose on [strong demand](https://example.com).\n" * 40
+
+
+def test_real_mode_reads_the_news_summary_and_the_sources(monkeypatch):
+    real_mode(monkeypatch, full_state(news_report=LONG_NEWS))
+    result = agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)
+
+    summary = result["newsSummary"]
+    assert 0 < len(summary) <= 700
+    assert summary.endswith("...")
+    assert summary.startswith("Headline\nShares rose on strong demand.")
+    for mark in ("#", "*", "[", "](", "https"):
+        assert mark not in summary
+    assert result["sources"] == DEFAULT_SOURCES
+
+
+def test_a_short_news_report_is_kept_whole(monkeypatch):
+    real_mode(monkeypatch, full_state(news_report="**Quiet** week for the company."))
+    assert agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)["newsSummary"] == \
+        "Quiet week for the company."
+
+
+def test_a_news_report_given_as_content_parts_is_read(monkeypatch):
+    real_mode(monkeypatch, full_state(news_report=[{"type": "text", "text": "## Big news\n\nShares rose."}]))
+    assert agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)["newsSummary"] == "Big news\nShares rose."
+
+
+def test_no_news_report_gives_no_summary_and_no_news_source(monkeypatch):
+    real_mode(monkeypatch, full_state(news_report=""))
+    result = agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)
+
+    assert result["newsSummary"] == ""
+    assert result["sources"] == [DEFAULT_SOURCES[0], DEFAULT_SOURCES[2]]
+
+
+def test_the_sources_follow_the_graphs_configured_vendors(monkeypatch):
+    config = {"data_vendors": {"news_data": "alpha_vantage", "fundamental_data": "yfinance"}}
+    real_mode(monkeypatch, full_state(), config=config)
+
+    assert agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)["sources"] == [
+        "Yahoo Finance prices and indicators",
+        "Alpha Vantage news, past 7 days",
+        "Yahoo Finance financial statements",
+    ]
+
+
+def test_switched_off_analysts_have_no_source(monkeypatch):
+    real_mode(monkeypatch, full_state())
+    monkeypatch.setattr(settings, "ANALYSTS", ["market", "news"])
+    assert agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)["sources"] == DEFAULT_SOURCES[:2]
+
+
+def test_fake_mode_fills_the_news_summary_and_the_sources():
+    assert settings.FAKE_AI  # tests/conftest.py turns fake mode on
+    result = agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)
+
+    summary = result["newsSummary"]
+    assert 0 < len(summary) <= 700
+    assert summary.startswith("News for AAPL\n")
+    for mark in ("#", "*", "|", "---"):
+        assert mark not in summary
+    assert result["sources"] == DEFAULT_SOURCES

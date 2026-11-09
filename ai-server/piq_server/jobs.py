@@ -81,7 +81,9 @@ def _run(job_id: str, holdings: list[Holding]) -> None:
             "stocks": [{"ticker": s["ticker"], "rating": s["rating"], "decision": s["decision"],
                         "confidencePercent": s["confidencePercent"],
                         "confidenceLevel": s["confidenceLevel"],
-                        "votes": s["votes"]}
+                        "votes": s["votes"],
+                        "newsSummary": s["newsSummary"],
+                        "sources": s["sources"]}
                        for s in stocks],
         }
         _update(job_id, status="done", result=result)

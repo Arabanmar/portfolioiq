@@ -45,6 +45,20 @@ portfolio gets the average weighted by position value, rounded to a whole
 number, in `result.confidence`. It measures how much the agents agree, not the
 chance of making money.
 
+**What the agents read.** Each stock also carries `newsSummary` (the start of
+the News Analyst's report as plain text, at most 700 characters, cut at a whole
+word) and `sources` (the data sources each analyst that produced a report can
+use, from TradingAgents' configured data vendors, for example "Yahoo Finance
+prices and indicators", "Yahoo Finance news, past 7 days", "SEC EDGAR financial
+statements"). `sources` is not a log of the exact calls the model made:
+TradingAgents keeps each analyst's tool calls out of its final state. Only the
+first vendor of a chain is named (a non-US company, or an EDGAR failure, falls
+back to Yahoo Finance), "past 7 days" is what the News Analyst is told rather
+than the exact dates it picked, a source is listed even if its tools returned
+no data, and the News Analyst's optional macro-data (FRED) and Polymarket tools
+are not listed. The app labels the list "Data sources the agents can use". See
+`piq_server/reading.py` and `piq_server/text.py`.
+
 **Diversification score** = 100 x (1 - sum of squared weights): 0 means
 everything in one stock.
 

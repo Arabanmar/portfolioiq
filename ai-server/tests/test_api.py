@@ -47,6 +47,9 @@ def test_full_analysis_then_chat():
         assert s["confidenceLevel"] in ("High", "Medium", "Low")
         assert set(s["votes"]) == {"researchManager", "trader", "final"}
         assert s["votes"]["final"] == s["rating"]
+    for s in result["stocks"]:
+        assert 0 < len(s["newsSummary"]) <= 700
+        assert s["sources"]
     percents = [s["confidencePercent"] for s in result["stocks"]]
     portfolio = result["confidence"]
     assert min(percents) <= portfolio["confidencePercent"] <= max(percents)

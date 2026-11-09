@@ -20,6 +20,7 @@ import com.portfolioiq.data.repository.FinnhubStockPriceRepositoryImpl;
 import com.portfolioiq.data.repository.FirestorePortfolioRepositoryImpl;
 import com.portfolioiq.data.repository.HttpAiAnalysisRepositoryImpl;
 import com.portfolioiq.domain.model.AgentConfidence;
+import com.portfolioiq.domain.model.AgentReading;
 import com.portfolioiq.domain.model.AnalysisProgress;
 import com.portfolioiq.domain.model.PortfolioAnalysis;
 import com.portfolioiq.domain.model.PortfolioSummary;
@@ -254,6 +255,9 @@ public class AnalysisActivity extends AppCompatActivity {
                 stocks.addView(text(confidenceText(s.getConfidence()), 14, false, 4));
             }
             stocks.addView(text(preview(s.getDecision()), 14, false, 4));
+            if (s.getReading() != null) {
+                addReading(stocks, s.getReading());
+            }
         }
     }
 
@@ -266,6 +270,27 @@ public class AnalysisActivity extends AppCompatActivity {
             text += "\nPrice swings is an estimate: the price history could not be downloaded.";
         }
         return text;
+    }
+
+    /** The "What the agents read" block: the news the analyst read, then the data sources. */
+    private void addReading(LinearLayout container, AgentReading reading) {
+        container.addView(text("What the agents read", 14, true, 12));
+        if (!reading.getNewsSummary().isEmpty()) {
+            container.addView(text(reading.getNewsSummary(), 14, false, 4));
+        }
+        if (!reading.getSources().isEmpty()) {
+            container.addView(text("Data sources the agents can use: "
+                    + joinSources(reading.getSources()), 13, false, 4));
+        }
+    }
+
+    private static String joinSources(List<String> sources) {
+        StringBuilder text = new StringBuilder();
+        for (String source : sources) {
+            if (text.length() > 0) text.append("; ");
+            text.append(source);
+        }
+        return text.toString();
     }
 
     /** For example: "Confidence: 90% (High). How much the AI agents agree. Not a guarantee." */

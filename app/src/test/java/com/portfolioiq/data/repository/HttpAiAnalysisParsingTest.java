@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.portfolioiq.domain.model.AgentConfidence;
+import com.portfolioiq.domain.model.AgentReading;
 import com.portfolioiq.domain.model.PortfolioAnalysis;
 import com.portfolioiq.domain.model.RiskBreakdown;
 
@@ -158,5 +159,84 @@ public class HttpAiAnalysisParsingTest {
 
         assertNull(analysis.getConfidence());
         assertNull(analysis.getStocks().get(0).getConfidence());
+    }
+
+    private static final String TWO_SOURCES =
+            "\"sources\":[\"Yahoo Finance prices and indicators\",\"SEC EDGAR financial statements\"]";
+
+    @Test
+    public void reading_isParsedForEachStock() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK, "",
+                ",\"newsSummary\":\"Shares rose.\\nCosts fell.\"," + TWO_SOURCES));
+
+        AgentReading reading = analysis.getStocks().get(0).getReading();
+        assertNotNull(reading);
+        assertEquals("Shares rose.\nCosts fell.", reading.getNewsSummary());
+        assertEquals(2, reading.getSources().size());
+        assertEquals("Yahoo Finance prices and indicators", reading.getSources().get(0));
+        assertEquals("SEC EDGAR financial statements", reading.getSources().get(1));
+        // the rest of the stock still reads as before
+        assertEquals("Buy", analysis.getStocks().get(0).getRating());
+        assertEquals("d", analysis.getStocks().get(0).getDecision());
+    }
+
+    @Test
+    public void olderServerWithoutReading_hasNone() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK));
+
+        assertNull(analysis.getStocks().get(0).getReading());
+        assertEquals("Buy", analysis.getStocks().get(0).getRating());
+    }
+
+    @Test
+    public void sourcesWithoutNews_areKeptWithAnEmptySummary() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK, "",
+                ",\"newsSummary\":\"\"," + TWO_SOURCES));
+
+        AgentReading reading = analysis.getStocks().get(0).getReading();
+        assertNotNull(reading);
+        assertEquals("", reading.getNewsSummary());
+        assertEquals(2, reading.getSources().size());
+    }
+
+    @Test
+    public void newsWithoutSources_isKeptWithNoSources() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK, "",
+                ",\"newsSummary\":\"Quiet week.\",\"sources\":[]"));
+
+        AgentReading reading = analysis.getStocks().get(0).getReading();
+        assertNotNull(reading);
+        assertEquals("Quiet week.", reading.getNewsSummary());
+        assertTrue(reading.getSources().isEmpty());
+    }
+
+    @Test
+    public void blankAndNullSources_areDropped() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK, "",
+                ",\"sources\":[\" \",null,\"Yahoo Finance news, past 7 days\"]"));
+
+        AgentReading reading = analysis.getStocks().get(0).getReading();
+        assertNotNull(reading);
+        assertEquals(1, reading.getSources().size());
+        assertEquals("Yahoo Finance news, past 7 days", reading.getSources().get(0));
+    }
+
+    @Test
+    public void nullNewsAndNoSources_hasNoReading() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK, "",
+                ",\"newsSummary\":null,\"sources\":[]"));
+
+        assertNull(analysis.getStocks().get(0).getReading());
+    }
+
+    @Test
+    public void readingAndConfidence_areParsedTogether() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK, "",
+                ",\"confidencePercent\":90.0,\"confidenceLevel\":\"High\","
+                        + "\"newsSummary\":\"Shares rose.\"," + TWO_SOURCES));
+
+        assertNotNull(analysis.getStocks().get(0).getConfidence());
+        assertNotNull(analysis.getStocks().get(0).getReading());
+        assertEquals("Shares rose.", analysis.getStocks().get(0).getReading().getNewsSummary());
     }
 }
