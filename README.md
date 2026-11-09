@@ -54,11 +54,55 @@ sync, and run it on an emulator or device (**Run → Run 'app'**), or just
 compile it without running anything (**Build → Compile All Sources**, or
 **Build → Make Project**) to confirm it builds.
 
+### Quick start (in this order)
+
+1. Start the AI server: double-click `ai-server/start_server.bat` and keep
+   the window open. `http://127.0.0.1:8000/health` should say `"status":"ok"`.
+2. Start the emulator from Android Studio's Device Manager and wait for the
+   home screen.
+3. Press **Run** in Android Studio.
+4. Create an account, add a stock from the dropdown, then tap **AI Analysis**.
+   One stock takes a few minutes the first time; the same portfolio again on
+   the same day reuses the saved result and finishes in seconds.
+
+### If the app says it can't reach the AI server
+
+On some laptops the emulator cannot reach the default address
+`http://10.0.2.2:8000` (the request just times out, while the browser on the
+laptop works). Forward the port over adb instead:
+
+1. In Android Studio's Terminal, with the emulator running:
+   ```
+   adb reverse tcp:8000 tcp:8000
+   ```
+   (adb is in `%LOCALAPPDATA%\Android\Sdk\platform-tools`). Run it again
+   after the emulator restarts.
+2. Add this line to `local.properties`, then press **Run** again:
+   ```
+   AI_SERVER_URL=http://127.0.0.1:8000
+   ```
+
+The same two steps work for a real phone connected with USB debugging.
+Every request from the app shows up as a line in the server window, so you
+can see whether the app is reaching it.
+
 ### Running tests
 
-The unit test suite (`app/src/test/java/com/portfolioiq/...`) is plain
-JVM tests — no emulator needed. Right-click the `test` folder in Android
-Studio and choose **Run Tests**, or run `./gradlew test` from a terminal.
+One command runs everything and prints a summary with the exact numbers
+(Android unit tests through Gradle, and the AI server tests with pytest in
+fake AI mode, so no key is used):
+
+```
+bash .claude/skills/run-unit-tests/run_tests.sh
+```
+
+In Claude Code the same thing is `/run-unit-tests`. You can also right-click
+the `test` folder in Android Studio and choose **Run Tests**.
+
+### Keys
+
+No key is committed. `app/google-services.json`, `local.properties` and
+`ai-server/.env` are all in `.gitignore`.
 
 ## Branch strategy
 
