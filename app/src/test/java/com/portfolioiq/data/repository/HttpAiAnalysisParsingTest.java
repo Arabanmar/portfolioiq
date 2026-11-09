@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.portfolioiq.domain.model.AgentConfidence;
+import com.portfolioiq.domain.model.AgentDebate;
 import com.portfolioiq.domain.model.AgentReading;
 import com.portfolioiq.domain.model.PortfolioAnalysis;
 import com.portfolioiq.domain.model.RiskBreakdown;
@@ -238,5 +239,69 @@ public class HttpAiAnalysisParsingTest {
         assertNotNull(analysis.getStocks().get(0).getConfidence());
         assertNotNull(analysis.getStocks().get(0).getReading());
         assertEquals("Shares rose.", analysis.getStocks().get(0).getReading().getNewsSummary());
+    }
+
+    @Test
+    public void debate_isParsedForEachStock() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK, "",
+                ",\"bullCase\":\"Growth is strong.\",\"bearCase\":\"Costs are rising.\""));
+
+        AgentDebate debate = analysis.getStocks().get(0).getDebate();
+        assertNotNull(debate);
+        assertEquals("Growth is strong.", debate.getBullCase());
+        assertEquals("Costs are rising.", debate.getBearCase());
+        // the rest of the stock still reads as before
+        assertEquals("Buy", analysis.getStocks().get(0).getRating());
+        assertEquals("d", analysis.getStocks().get(0).getDecision());
+    }
+
+    @Test
+    public void debateLineBreaks_areKept() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK, "",
+                ",\"bullCase\":\"First.\\nSecond.\",\"bearCase\":\"Third.\""));
+
+        assertEquals("First.\nSecond.", analysis.getStocks().get(0).getDebate().getBullCase());
+    }
+
+    @Test
+    public void olderServerWithoutDebate_hasNone() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK));
+
+        assertNull(analysis.getStocks().get(0).getDebate());
+        assertEquals("Buy", analysis.getStocks().get(0).getRating());
+    }
+
+    @Test
+    public void oneSideOnly_isKeptWithTheOtherEmpty() throws Exception {
+        PortfolioAnalysis bullOnly = HttpAiAnalysisRepositoryImpl.parseAnalysis(
+                result(PLAIN_RISK, "", ",\"bullCase\":\"Growth is strong.\""));
+        PortfolioAnalysis bearOnly = HttpAiAnalysisRepositoryImpl.parseAnalysis(
+                result(PLAIN_RISK, "", ",\"bullCase\":\"\",\"bearCase\":\"Costs are rising.\""));
+
+        assertEquals("Growth is strong.", bullOnly.getStocks().get(0).getDebate().getBullCase());
+        assertEquals("", bullOnly.getStocks().get(0).getDebate().getBearCase());
+        assertEquals("", bearOnly.getStocks().get(0).getDebate().getBullCase());
+        assertEquals("Costs are rising.", bearOnly.getStocks().get(0).getDebate().getBearCase());
+    }
+
+    @Test
+    public void blankOrNullCases_haveNoDebate() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK, "",
+                ",\"bullCase\":\"   \",\"bearCase\":null"));
+
+        assertNull(analysis.getStocks().get(0).getDebate());
+    }
+
+    @Test
+    public void debateReadingAndConfidence_areParsedTogether() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK, "",
+                ",\"confidencePercent\":90.0,\"confidenceLevel\":\"High\","
+                        + "\"newsSummary\":\"Shares rose.\",\"sources\":[\"SEC EDGAR financial statements\"],"
+                        + "\"bullCase\":\"Growth is strong.\",\"bearCase\":\"Costs are rising.\""));
+
+        assertNotNull(analysis.getStocks().get(0).getConfidence());
+        assertNotNull(analysis.getStocks().get(0).getReading());
+        assertNotNull(analysis.getStocks().get(0).getDebate());
+        assertEquals("Costs are rising.", analysis.getStocks().get(0).getDebate().getBearCase());
     }
 }

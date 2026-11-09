@@ -20,6 +20,7 @@ import com.portfolioiq.data.repository.FinnhubStockPriceRepositoryImpl;
 import com.portfolioiq.data.repository.FirestorePortfolioRepositoryImpl;
 import com.portfolioiq.data.repository.HttpAiAnalysisRepositoryImpl;
 import com.portfolioiq.domain.model.AgentConfidence;
+import com.portfolioiq.domain.model.AgentDebate;
 import com.portfolioiq.domain.model.AgentReading;
 import com.portfolioiq.domain.model.AnalysisProgress;
 import com.portfolioiq.domain.model.PortfolioAnalysis;
@@ -250,7 +251,14 @@ public class AnalysisActivity extends AppCompatActivity {
         LinearLayout stocks = findViewById(R.id.stocksContainer);
         stocks.removeAllViews();
         for (StockAnalysis s : a.getStocks()) {
-            stocks.addView(text(s.getTicker() + ": " + s.getRating(), 16, true, 16));
+            if (s.getDebate() != null) {
+                // The case for and against comes first, then the verdict.
+                stocks.addView(text(s.getTicker(), 16, true, 16));
+                addDebate(stocks, s.getDebate());
+                stocks.addView(text("Final rating: " + s.getRating(), 16, true, 12));
+            } else {
+                stocks.addView(text(s.getTicker() + ": " + s.getRating(), 16, true, 16));
+            }
             if (s.getConfidence() != null) {
                 stocks.addView(text(confidenceText(s.getConfidence()), 14, false, 4));
             }
@@ -270,6 +278,23 @@ public class AnalysisActivity extends AppCompatActivity {
             text += "\nPrice swings is an estimate: the price history could not be downloaded.";
         }
         return text;
+    }
+
+    /** "For" and "Against": what each side argued, shown before the final rating. */
+    private void addDebate(LinearLayout container, AgentDebate debate) {
+        TextView forHeading = text("For", 14, true, 8);
+        forHeading.setContentDescription("Case for this stock");
+        container.addView(forHeading);
+        container.addView(text(caseText(debate.getBullCase()), 14, false, 2));
+        TextView againstHeading = text("Against", 14, true, 8);
+        againstHeading.setContentDescription("Case against this stock");
+        container.addView(againstHeading);
+        container.addView(text(caseText(debate.getBearCase()), 14, false, 2));
+    }
+
+    /** One side's argument, or a note when that side said nothing (so one side never shows alone). */
+    private static String caseText(String argument) {
+        return argument.isEmpty() ? "Not available." : argument;
     }
 
     /** The "What the agents read" block: the news the analyst read, then the data sources. */
