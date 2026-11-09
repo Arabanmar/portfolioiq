@@ -19,6 +19,7 @@ import com.portfolioiq.R;
 import com.portfolioiq.data.repository.FinnhubStockPriceRepositoryImpl;
 import com.portfolioiq.data.repository.FirestorePortfolioRepositoryImpl;
 import com.portfolioiq.data.repository.HttpAiAnalysisRepositoryImpl;
+import com.portfolioiq.domain.model.AgentConfidence;
 import com.portfolioiq.domain.model.AnalysisProgress;
 import com.portfolioiq.domain.model.PortfolioAnalysis;
 import com.portfolioiq.domain.model.PortfolioSummary;
@@ -230,6 +231,12 @@ public class AnalysisActivity extends AppCompatActivity {
         if (parts != null) {
             riskParts.setText(riskPartsText(parts));
         }
+        TextView confidenceView = findViewById(R.id.confidenceText);
+        AgentConfidence confidence = a.getConfidence();
+        confidenceView.setVisibility(confidence == null ? View.GONE : View.VISIBLE);
+        if (confidence != null) {
+            confidenceView.setText(confidenceText(confidence));
+        }
         ((TextView) findViewById(R.id.numbersText)).setText(String.format(Locale.US,
                 "Diversification score: %.0f / 100\nLargest position: %s (%.1f%% of portfolio)\nAnalysis date: %s",
                 a.getDiversificationScore(), a.getLargestPosition(), a.getLargestPositionPercent(),
@@ -243,6 +250,9 @@ public class AnalysisActivity extends AppCompatActivity {
         stocks.removeAllViews();
         for (StockAnalysis s : a.getStocks()) {
             stocks.addView(text(s.getTicker() + ": " + s.getRating(), 16, true, 16));
+            if (s.getConfidence() != null) {
+                stocks.addView(text(confidenceText(s.getConfidence()), 14, false, 4));
+            }
             stocks.addView(text(preview(s.getDecision()), 14, false, 4));
         }
     }
@@ -256,6 +266,13 @@ public class AnalysisActivity extends AppCompatActivity {
             text += "\nPrice swings is an estimate: the price history could not be downloaded.";
         }
         return text;
+    }
+
+    /** For example: "Confidence: 90% (High). How much the AI agents agree. Not a guarantee." */
+    private static String confidenceText(AgentConfidence confidence) {
+        return String.format(Locale.US,
+                "Confidence: %.0f%% (%s). How much the AI agents agree. Not a guarantee.",
+                confidence.getPercent(), confidence.getLevel());
     }
 
     private TextView text(String value, int sizeSp, boolean bold, int marginTopDp) {

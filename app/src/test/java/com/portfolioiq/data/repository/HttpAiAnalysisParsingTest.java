@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.portfolioiq.domain.model.AgentConfidence;
 import com.portfolioiq.domain.model.PortfolioAnalysis;
 import com.portfolioiq.domain.model.RiskBreakdown;
 
@@ -20,8 +21,19 @@ public class HttpAiAnalysisParsingTest {
 
     private static final double DELTA = 0.0001;
 
+    private static final String PLAIN_RISK = "{\"riskPercent\":54.5,\"riskLevel\":\"Medium\"}";
+
     /** A finished analysis as the server sends it, with the given "risk" object. */
     private static JSONObject result(String riskJson) throws Exception {
+        return result(riskJson, "", "");
+    }
+
+    /**
+     * Same, with extra JSON members: extraResult is added to the result and
+     * extraStock to its one stock. Each must start with a comma (or be empty).
+     */
+    private static JSONObject result(String riskJson, String extraResult, String extraStock)
+            throws Exception {
         return new JSONObject("{"
                 + "\"analysisDate\":\"2026-11-08\","
                 + "\"metrics\":{\"diversificationScore\":0.0,\"largestPosition\":\"AAPL\","
@@ -29,7 +41,9 @@ public class HttpAiAnalysisParsingTest {
                 + "\"risk\":" + riskJson + ","
                 + "\"summary\":{\"summary\":\"s\",\"strengths\":[\"a\"],\"weaknesses\":[\"b\"],"
                 + "\"diversificationComment\":\"c\"},"
-                + "\"stocks\":[{\"ticker\":\"AAPL\",\"rating\":\"Buy\",\"decision\":\"d\"}]"
+                + "\"stocks\":[{\"ticker\":\"AAPL\",\"rating\":\"Buy\",\"decision\":\"d\""
+                + extraStock + "}]"
+                + extraResult
                 + "}");
     }
 
@@ -88,5 +102,61 @@ public class HttpAiAnalysisParsingTest {
         assertNotNull(parts);
         assertNull(parts.getAnnualVolatilityPercent());
         assertFalse(parts.isVolatilityAvailable());
+    }
+
+    @Test
+    public void confidence_isParsedForEachStockAndForThePortfolio() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK,
+                ",\"confidence\":{\"confidencePercent\":77.5,\"confidenceLevel\":\"High\"}",
+                ",\"confidencePercent\":90.0,\"confidenceLevel\":\"High\","
+                        + "\"votes\":{\"researchManager\":\"Buy\",\"trader\":\"Buy\",\"final\":\"Buy\"}"));
+
+        AgentConfidence portfolio = analysis.getConfidence();
+        assertNotNull(portfolio);
+        assertEquals(77.5, portfolio.getPercent(), DELTA);
+        assertEquals("High", portfolio.getLevel());
+
+        AgentConfidence stock = analysis.getStocks().get(0).getConfidence();
+        assertNotNull(stock);
+        assertEquals(90.0, stock.getPercent(), DELTA);
+        assertEquals("High", stock.getLevel());
+        // the rest of the stock still reads as before
+        assertEquals("Buy", analysis.getStocks().get(0).getRating());
+        assertEquals("d", analysis.getStocks().get(0).getDecision());
+    }
+
+    @Test
+    public void lowConfidence_isParsedAsGiven() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK, "",
+                ",\"confidencePercent\":10.0,\"confidenceLevel\":\"Low\""));
+
+        assertEquals(10.0, analysis.getStocks().get(0).getConfidence().getPercent(), DELTA);
+        assertEquals("Low", analysis.getStocks().get(0).getConfidence().getLevel());
+    }
+
+    @Test
+    public void olderServerWithoutConfidence_hasNone() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK));
+
+        assertNull(analysis.getConfidence());
+        assertNull(analysis.getStocks().get(0).getConfidence());
+        assertEquals("Buy", analysis.getStocks().get(0).getRating());
+    }
+
+    @Test
+    public void nullPortfolioConfidence_hasNone() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(
+                result(PLAIN_RISK, ",\"confidence\":null", ""));
+
+        assertNull(analysis.getConfidence());
+    }
+
+    @Test
+    public void confidenceMissingItsLevel_hasNone() throws Exception {
+        PortfolioAnalysis analysis = HttpAiAnalysisRepositoryImpl.parseAnalysis(result(PLAIN_RISK,
+                ",\"confidence\":{\"confidencePercent\":77.5}", ",\"confidencePercent\":90.0"));
+
+        assertNull(analysis.getConfidence());
+        assertNull(analysis.getStocks().get(0).getConfidence());
     }
 }

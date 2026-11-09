@@ -34,6 +34,17 @@ agents' ratings, never below 5. Under 35 is Low, under 65 Medium, else High.
   (unreadable rating 50), weighted by allocation. No rating is 0, because no
   stock has zero risk.
 
+**Confidence** = how much the three agents that judge each stock agree
+(`piq_server/confidence.py`): the Research Manager's recommendation, the
+Trader's action and the final rating, compared by direction (Buy and
+Overweight = up, Hold = neutral, Underweight and Sell = down). All three the
+same way = 90, two of three = 65, one of three = 40, minus 10 for each empty
+analyst report, kept between 10 and 95. High from 75, Medium from 50, else Low.
+Each stock gets `confidencePercent`, `confidenceLevel` and `votes`; the
+portfolio gets the average weighted by position value, rounded to a whole
+number, in `result.confidence`. It measures how much the agents agree, not the
+chance of making money.
+
 **Diversification score** = 100 x (1 - sum of squared weights): 0 means
 everything in one stock.
 

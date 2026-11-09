@@ -5,6 +5,7 @@ import android.os.Looper;
 import android.util.Log;
 
 import com.portfolioiq.BuildConfig;
+import com.portfolioiq.domain.model.AgentConfidence;
 import com.portfolioiq.domain.model.AnalysisProgress;
 import com.portfolioiq.domain.model.HoldingPosition;
 import com.portfolioiq.domain.model.PortfolioAnalysis;
@@ -211,7 +212,8 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
         JSONArray stockArray = result.getJSONArray("stocks");
         for (int i = 0; i < stockArray.length(); i++) {
             JSONObject s = stockArray.getJSONObject(i);
-            stocks.add(new StockAnalysis(s.getString("ticker"), s.getString("rating"), s.optString("decision", "")));
+            stocks.add(new StockAnalysis(s.getString("ticker"), s.getString("rating"),
+                    s.optString("decision", ""), parseConfidence(s)));
         }
 
         return new PortfolioAnalysis(
@@ -219,6 +221,7 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
                 risk.getDouble("riskPercent"),
                 risk.getString("riskLevel"),
                 parseRiskBreakdown(risk),
+                parseConfidence(result.optJSONObject("confidence")),
                 metrics.getDouble("diversificationScore"),
                 metrics.getString("largestPosition"),
                 metrics.getDouble("largestPositionPercent"),
@@ -227,6 +230,18 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
                 stringList(summary.optJSONArray("weaknesses")),
                 summary.optString("diversificationComment", ""),
                 stocks);
+    }
+
+    /**
+     * The agents' confidence from an object holding confidencePercent and
+     * confidenceLevel (a stock, or the portfolio's "confidence"), or null when
+     * either is missing (an older server).
+     */
+    private static AgentConfidence parseConfidence(JSONObject json) {
+        if (json == null || json.isNull("confidencePercent") || json.isNull("confidenceLevel")) {
+            return null;
+        }
+        return new AgentConfidence(json.optDouble("confidencePercent"), json.optString("confidenceLevel"));
     }
 
     /** The three risk parts, or null when the server is an older one that does not send them. */

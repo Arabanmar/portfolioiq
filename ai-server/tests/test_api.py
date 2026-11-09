@@ -42,6 +42,15 @@ def test_full_analysis_then_chat():
     assert risk["volatilityPart"] == 50
     assert result["summary"]["summary"]
     assert job["progress"] == {"done": 2, "total": 2, "current": None}
+    for s in result["stocks"]:
+        assert 10 <= s["confidencePercent"] <= 95
+        assert s["confidenceLevel"] in ("High", "Medium", "Low")
+        assert set(s["votes"]) == {"researchManager", "trader", "final"}
+        assert s["votes"]["final"] == s["rating"]
+    percents = [s["confidencePercent"] for s in result["stocks"]]
+    portfolio = result["confidence"]
+    assert min(percents) <= portfolio["confidencePercent"] <= max(percents)
+    assert portfolio["confidenceLevel"] in ("High", "Medium", "Low")
 
     answer = client.post("/chat", json={"jobId": job["jobId"], "question": "Is my portfolio risky?"})
     assert answer.status_code == 200
@@ -90,6 +99,19 @@ def test_volatility_is_asked_for_with_the_portfolio_weights(monkeypatch):
     assert abs(seen["MSFT"] - 23.08) < 0.01
 
 
+def test_portfolio_confidence_is_weighted_by_position_value():
+    # fake mode: TSLA gets confidence 90, JNJ gets 40 (see tests/test_agents.py)
+    res = client.post("/analysis", json={"holdings": [
+        {"ticker": "TSLA", "quantity": 10, "purchasePrice": 150, "currentPrice": 200},
+        {"ticker": "JNJ", "quantity": 2, "purchasePrice": 300},
+    ]})
+    result = wait_for(res.json()["jobId"])["result"]
+    by_ticker = {s["ticker"]: s["confidencePercent"] for s in result["stocks"]}
+    assert by_ticker == {"TSLA": 90, "JNJ": 40}
+    # (2000 x 90 + 600 x 40) / 2600 = 78.46, shown as the whole number 78
+    assert result["confidence"] == {"confidencePercent": 78, "confidenceLevel": "High"}
+
+
 def test_bad_input_is_rejected():
     assert client.post("/analysis", json={"holdings": []}).status_code == 422
     assert client.post("/analysis", json={"holdings": [
@@ -107,5 +129,9 @@ def test_token_is_required_when_configured(monkeypatch):
     monkeypatch.setattr(settings, "SERVER_TOKEN", "secret")
     holdings = {"holdings": [{"ticker": "AAPL", "quantity": 1, "purchasePrice": 1}]}
     assert client.post("/analysis", json=holdings).status_code == 401
-    assert client.post("/analysis", json=holdings, headers={"X-PIQ-Token": "secret"}).status_code == 202
+    accepted = client.post("/analysis", json=holdings, headers={"X-PIQ-Token": "secret"})
+    assert accepted.status_code == 202
     assert client.get("/health").status_code == 200  # health stays open
+    # Let the job finish before the next test, so it can't run while a later test has changed the settings.
+    monkeypatch.setattr(settings, "SERVER_TOKEN", "")
+    wait_for(accepted.json()["jobId"])

@@ -14,6 +14,7 @@ public class PortfolioAnalysis {
     private final double riskPercent;
     private final String riskLevel;
     private final RiskBreakdown riskBreakdown;
+    private final AgentConfidence confidence;
     private final double diversificationScore;
     private final String largestPosition;
     private final double largestPositionPercent;
@@ -23,9 +24,12 @@ public class PortfolioAnalysis {
     private final String diversificationComment;
     private final List<StockAnalysis> stocks;
 
-    /** riskBreakdown may be null (an older AI server that does not send the three parts). */
+    /**
+     * riskBreakdown and confidence may be null (an older AI server that does not
+     * send the three risk parts or the agents' confidence).
+     */
     public PortfolioAnalysis(String analysisDate, double riskPercent, String riskLevel,
-                             RiskBreakdown riskBreakdown,
+                             RiskBreakdown riskBreakdown, AgentConfidence confidence,
                              double diversificationScore, String largestPosition,
                              double largestPositionPercent, String summary, List<String> strengths,
                              List<String> weaknesses, String diversificationComment,
@@ -34,6 +38,7 @@ public class PortfolioAnalysis {
         this.riskPercent = riskPercent;
         this.riskLevel = riskLevel;
         this.riskBreakdown = riskBreakdown;
+        this.confidence = confidence;
         this.diversificationScore = diversificationScore;
         this.largestPosition = largestPosition;
         this.largestPositionPercent = largestPositionPercent;
@@ -48,6 +53,7 @@ public class PortfolioAnalysis {
     public double getRiskPercent() { return riskPercent; }
     public String getRiskLevel() { return riskLevel; }
     public RiskBreakdown getRiskBreakdown() { return riskBreakdown; }
+    public AgentConfidence getConfidence() { return confidence; }
     public double getDiversificationScore() { return diversificationScore; }
     public String getLargestPosition() { return largestPosition; }
     public double getLargestPositionPercent() { return largestPositionPercent; }
