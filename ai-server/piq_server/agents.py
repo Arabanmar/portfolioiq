@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import threading
 
-from . import confidence, reading, settings
+from . import confidence, debate, reading, settings
 
 _graph = None
 _graph_lock = threading.Lock()
@@ -50,7 +50,8 @@ def _get_graph():
 
 def analyze_stock(ticker: str, trade_date: str, positions: list[dict]) -> dict:
     """Returns {"ticker", "rating", "decision", "reports", "confidencePercent",
-    "confidenceLevel", "votes", "newsSummary", "sources"} for one stock.
+    "confidenceLevel", "votes", "newsSummary", "sources", "bullCase", "bearCase"} for
+    one stock.
 
     positions: [{"ticker", "quantity", "average_price"}] for the whole portfolio.
     The confidence fields say how much the Research Manager, the Trader and the
@@ -83,6 +84,7 @@ def analyze_stock(ticker: str, trade_date: str, positions: list[dict]) -> dict:
         ),
         **reading.stock_reading(reports, settings.ANALYSTS,
                                 (getattr(graph, "config", None) or {}).get("data_vendors")),
+        **debate.stock_debate(state),
     }
 
 
@@ -109,6 +111,20 @@ def _fake_reports(ticker: str) -> dict:
     }
 
 
+def _fake_debate_state(ticker: str) -> dict:
+    """A made-up debate in the shape TradingAgents keeps it, so fake mode runs the real parser."""
+    return {"investment_debate_state": {
+        "bull_history": (f"\nBull Analyst: **(Fake mode) The case for {ticker}.** Demand looks "
+                         "steady and margins have been improving.\n"
+                         "- Customers keep coming back\n- Costs are under control\n\n"
+                         "The bear's worries already look priced in."),
+        "bear_history": (f"\nBear Analyst: **(Fake mode) The case against {ticker}.** Growth may "
+                         "slow and the price already assumes a lot.\n"
+                         "- Costs could rise again\n- Competition is getting stronger\n\n"
+                         "The bull is ignoring these risks."),
+    }}
+
+
 def _fake_analysis(ticker: str) -> dict:
     digest = int(hashlib.sha256(ticker.encode()).hexdigest(), 16)
     rating = FAKE_RATINGS[digest % len(FAKE_RATINGS)]
@@ -132,4 +148,5 @@ def _fake_analysis(ticker: str) -> dict:
             settings.ANALYSTS,
         ),
         **reading.stock_reading(reports, settings.ANALYSTS),
+        **debate.stock_debate(_fake_debate_state(ticker)),
     }

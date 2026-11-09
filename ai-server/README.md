@@ -59,6 +59,15 @@ no data, and the News Analyst's optional macro-data (FRED) and Polymarket tools
 are not listed. The app labels the list "Data sources the agents can use". See
 `piq_server/reading.py` and `piq_server/text.py`.
 
+**The case for and against.** Each stock also carries `bullCase` and `bearCase`:
+the first argument of TradingAgents' Bull and Bear researchers
+(`investment_debate_state`), with the "Bull Analyst:" / "Bear Analyst:" label
+removed, as plain text, at most 500 characters, cut at a whole word. They are
+LLM-written debate speeches, each told to advocate one side, and the bear's is
+written after reading the bull's and rebuts it, so it reads conversationally.
+The app shows them as "For" and "Against" before the final rating. See
+`piq_server/debate.py`.
+
 **Diversification score** = 100 x (1 - sum of squared weights): 0 means
 everything in one stock.
 

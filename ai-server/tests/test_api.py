@@ -50,6 +50,8 @@ def test_full_analysis_then_chat():
     for s in result["stocks"]:
         assert 0 < len(s["newsSummary"]) <= 700
         assert s["sources"]
+        assert 0 < len(s["bullCase"]) <= 500
+        assert 0 < len(s["bearCase"]) <= 500
     percents = [s["confidencePercent"] for s in result["stocks"]]
     portfolio = result["confidence"]
     assert min(percents) <= portfolio["confidencePercent"] <= max(percents)

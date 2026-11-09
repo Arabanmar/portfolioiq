@@ -6,6 +6,7 @@ import android.util.Log;
 
 import com.portfolioiq.BuildConfig;
 import com.portfolioiq.domain.model.AgentConfidence;
+import com.portfolioiq.domain.model.AgentDebate;
 import com.portfolioiq.domain.model.AgentReading;
 import com.portfolioiq.domain.model.AnalysisProgress;
 import com.portfolioiq.domain.model.HoldingPosition;
@@ -214,7 +215,8 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
         for (int i = 0; i < stockArray.length(); i++) {
             JSONObject s = stockArray.getJSONObject(i);
             stocks.add(new StockAnalysis(s.getString("ticker"), s.getString("rating"),
-                    s.optString("decision", ""), parseConfidence(s), parseReading(s)));
+                    s.optString("decision", ""), parseConfidence(s), parseReading(s),
+                    parseDebate(s)));
         }
 
         return new PortfolioAnalysis(
@@ -243,6 +245,19 @@ public class HttpAiAnalysisRepositoryImpl implements AiAnalysisRepository {
             return null;
         }
         return new AgentConfidence(json.optDouble("confidencePercent"), json.optString("confidenceLevel"));
+    }
+
+    /**
+     * The case for and against a stock (bullCase and bearCase), or null when the
+     * server sends neither (an older server) or both are empty.
+     */
+    private static AgentDebate parseDebate(JSONObject stock) {
+        String bull = stock.isNull("bullCase") ? "" : stock.optString("bullCase", "").trim();
+        String bear = stock.isNull("bearCase") ? "" : stock.optString("bearCase", "").trim();
+        if (bull.isEmpty() && bear.isEmpty()) {
+            return null;
+        }
+        return new AgentDebate(bull, bear);
     }
 
     /**

@@ -36,6 +36,10 @@ def full_state(**changes):
         "investment_plan": "**Recommendation**: Buy\n\n**Rationale**: r",
         "trader_investment_plan": "**Action**: Buy\n\n**Reasoning**: r",
         "final_trade_decision": "**Rating**: Buy\n\n**Executive Summary**: s",
+        "investment_debate_state": {
+            "bull_history": "\nBull Analyst: **Growth is strong.** Shares have room to run.",
+            "bear_history": "\nBear Analyst: **Costs are rising.** Demand is slowing.",
+        },
     }
     state.update(changes)
     return state
@@ -177,3 +181,62 @@ def test_fake_mode_fills_the_news_summary_and_the_sources():
     for mark in ("#", "*", "|", "---"):
         assert mark not in summary
     assert result["sources"] == DEFAULT_SOURCES
+
+
+# ---- the case for and against (Issue D) ----
+
+def test_real_mode_reads_both_sides_of_the_debate(monkeypatch):
+    real_mode(monkeypatch, full_state())
+    result = agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)
+
+    assert result["bullCase"] == "Growth is strong. Shares have room to run."
+    assert result["bearCase"] == "Costs are rising. Demand is slowing."
+
+
+def test_a_long_debate_is_cut_to_500_characters_per_side(monkeypatch):
+    long_bull = "\nBull Analyst: ## Case\n\n" + "- **Shares** rose on strong demand.\n" * 40
+    debate = {"bull_history": long_bull, "bear_history": "\nBear Analyst: Short."}
+    real_mode(monkeypatch, full_state(investment_debate_state=debate))
+    result = agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)
+
+    assert 0 < len(result["bullCase"]) <= 500
+    assert result["bullCase"].endswith("...")
+    assert result["bullCase"].startswith("Case\nShares rose on strong demand.")
+    for mark in ("#", "*", "Bull Analyst"):
+        assert mark not in result["bullCase"]
+    assert result["bearCase"] == "Short."
+
+
+def test_only_the_first_round_of_the_debate_is_shown(monkeypatch):
+    debate = {"bull_history": "\nBull Analyst: Round one.\nBull Analyst: Round two.",
+              "bear_history": "\nBear Analyst: First reply.\nBear Analyst: Second reply."}
+    real_mode(monkeypatch, full_state(investment_debate_state=debate))
+    result = agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)
+
+    assert result["bullCase"] == "Round one."
+    assert result["bearCase"] == "First reply."
+
+
+def test_a_state_without_a_debate_still_returns_the_analysis(monkeypatch):
+    state = full_state()
+    del state["investment_debate_state"]
+    real_mode(monkeypatch, state)
+    result = agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)
+
+    assert result["bullCase"] == ""
+    assert result["bearCase"] == ""
+    assert result["decision"].startswith("**Rating**: Buy")
+
+
+def test_fake_mode_fills_both_sides_of_the_debate():
+    assert settings.FAKE_AI  # tests/conftest.py turns fake mode on
+    result = agents.analyze_stock("AAPL", "2026-11-09", POSITIONS)
+
+    for side in ("bullCase", "bearCase"):
+        assert 0 < len(result[side]) <= 500
+        for mark in ("#", "*", "Analyst:"):
+            assert mark not in result[side]
+    assert result["bullCase"].startswith("(Fake mode) The case for AAPL.")
+    assert result["bearCase"].startswith("(Fake mode) The case against AAPL.")
+    assert "Customers keep coming back" in result["bullCase"]
+    assert "Competition is getting stronger" in result["bearCase"]
